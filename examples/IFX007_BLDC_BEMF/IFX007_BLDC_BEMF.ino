@@ -31,7 +31,7 @@
 
 
 uint8_t Commutation = 0;
-uint8_t BEMF_phase = A1;
+uint8_t BEMF_phase = A1;    //Hex value???
 uint8_t ClosedLoop = 0;
 uint8_t DutyCycle = 150;
 uint8_t Dir = 0;

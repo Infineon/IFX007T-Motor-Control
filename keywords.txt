@@ -12,12 +12,14 @@
 #######################################
 
 begin   KEYWORD2
+setUniDirMotorSpeed KEYWORD2
+setBiDirMotorSpeed  KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)
 #######################################
 
-IFX007TMotorControl    KEYWORD1
+IFX007TMotorControl KEYWORD1
 
 #######################################
 # Constants (LITERAL1)
