@@ -1,36 +1,35 @@
-//This code is for h bridge configuration. The motor should be connected to output V and output W.
+/**
+ * This code is for h bridge configuration. The motor should be connected to output U and output V.
+ * 
+ * Default Pin configuration:
 // Inhabit pins
 int INHU = 6;
 int INHV = 5;
 int INHW = 3;
-byte incomingbyte;
+
 //Input pins
 int INU = 11;
 int INV = 10;
 int INW = 9;
+*/
+#include "IFX007T-Motor-Control.h"
 
+//Create an instance of 'IFX007TMotorControl' called 'MyMotor'
+IFX007TMotorControl MyMotor = IFX007TMotorControl();
+//To change the Pins, enter your Pin configuration in the brackets.
+//IFX007TMotorControl MyMotor = IFX007TMotorControl(INHU_Pin, INHV_Pin, INHW_Pin, INU_Pin, INV_Pin, INW_Pin);
 
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
-  pinMode(INHU, OUTPUT);
-  pinMode(INHV, OUTPUT);
-  pinMode(INHW, OUTPUT);
-  pinMode(INU, OUTPUT);
-  pinMode(INV, OUTPUT);
-  pinMode(INW, OUTPUT);
-  digitalWrite(INHV, HIGH);
-  digitalWrite(INHW, HIGH);
-  digitalWrite(INHU, LOW);
-  digitalWrite(INW, LOW);// Output W is LOW.
+void setup()
+{
+  MyMotor.begin();
+
+  // First Argument: Choose which direction the Motor should turn
+  // Second Argument: Choose how fast it should turn: a value between 0 and 255
+  
+  MyMotor.setBiDirMotorSpeed(1, 127);
 }
 
-void loop() {
-//get PWM signal with 10kHz at output V. 
-//Frequency and Duty cycle can be changed by changing the delay time.
-   digitalWrite(INV, LOW);
-   delayMicroseconds(50);
-   digitalWrite(INV, HIGH);
-   delayMicroseconds(50);
+void loop()
+{
 
 }

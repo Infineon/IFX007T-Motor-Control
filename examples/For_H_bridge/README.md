@@ -1,12 +1,11 @@
 # Half Bridge setup
 
 Status: compiling, not tested
-Pictures follow.
+Picturs follow.
 
-This example is the easiest way to get into it: Just take a normal DC motor.
-Connect one pin to 'V' and the other pin to ground.
+This example shows, how you can turn a motor in both directions.
+Just take a normal DC motor. Connect one pin to 'U' and the other pin to 'V'.
 The pin assignment between your Arduino Uno and the BLDC shield is as follows:
-
 
 Inhabit pins:
 INHU = 6

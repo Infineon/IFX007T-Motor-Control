@@ -24,7 +24,7 @@ void setup()
   MyMotor.begin();
 
 
-  // Firts Argument: Choose which Motor to drive: 0 = U, 1 = V, 2 = W
+  // First Argument: Choose which Motor to drive: 0 = U, 1 = V, 2 = W
   // Second Argument: Choose how fast it should turn: a value between 0 and 255
   
   MyMotor.setUniDirMotorSpeed(1, 127);

@@ -11,15 +11,19 @@
 # Methods and Functions (KEYWORD2)
 #######################################
 
-begin   KEYWORD2
-setUniDirMotorSpeed KEYWORD2
-setBiDirMotorSpeed  KEYWORD2
+begin	KEYWORD2
+end	KEYWORD2
+setUniDirMotorSpeed	KEYWORD2
+setBiDirMotorSpeed	KEYWORD2
+setUniDirMotorSpeed	KEYWORD2
+configureBLDCMotor	KEYWORD2
+setBLDCmotorRPMspeed	KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)
 #######################################
 
-IFX007TMotorControl KEYWORD1
+IFX007TMotorControl	KEYWORD1
 
 #######################################
 # Constants (LITERAL1)
