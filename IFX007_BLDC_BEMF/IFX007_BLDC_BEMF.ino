@@ -149,7 +149,7 @@ V_neutral = (((uint32_t)analogRead(ADC_VS) * DutyCycle) >> 8);
           UpdateHardware(Commutation,0);
         }
         break;
-      defailt:
+      default:
       break;
       
     }
