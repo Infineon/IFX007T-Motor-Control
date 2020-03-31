@@ -3,11 +3,15 @@
 Status: compiling, not tested, not working
 Pictures follow.
 
-BEMF means **Back-Electromotive Force** and is a common way, to drive a brushless motor **without a sensor**. 
-This is done by measuring the current deliverd by the IFX007t to detect zero-crossing.
+## The Theory
+BEMF means **Back-Electromotive Force** and is a common way, to drive a brushless motor **without a sensor**.
+Every motor has in fact three coils (can be more but they are wired together internal) and thus for each coil one wire. When driving the motor, always two wires provide the voltage, while the third wire is floating.
+Once the motor spins fast enough, a voltage will be inducted in the third coil and since the corresponding wire is floating, the inducted voltage can be measured by the microcontroller. By evaluating the voltage curve, the microcontroller can conclude, at which angle the motor currently is.
 
 ## Hardware
-Connect the three wires of your brushless motor to the 'U V W' outputs of the board (the order deosn't matter). 
+Connect the three wires of your brushless motor to the 'U V W' outputs of the board (the order deosn't matter).
+Connect a voltage supply, suited to the motor you want to control (typically 12V or 24V).
+**Do not use a supply voltage higher than 24V, as this might damage your microcontroller board!**
 
 ## Default Pin Assignment
 

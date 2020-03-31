@@ -22,6 +22,10 @@ ADC_VS = A0
 
 #include "IFX007T-Motor-Control.h"
 
+// Choose which microcontroller board you have
+//#define ARM_XMC
+//#define AVR_Arduino
+
 uint16_t RefRPM = 0;
 
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'
@@ -32,13 +36,14 @@ IFX007TMotorControl MyMotor = IFX007TMotorControl();
 void setup()
 {
   Serial.begin(115200);
-  Serial.println(" Infineon BLCD motor test! ");
+  Serial.println(" Infineon BLDC motor test! ");
 
   MyMotor.begin();
 
-  // configureBLDCMotor(MotorPoles, NumberofMagnets, Hallsensor, torque)
+  
   // Enter your motor specific values. If you use a Hallsensor set 1, for sensorless application 0.
   // Torque means, how strong should the electormagnets pull, (0 -> nothing would happen; max 255 -> max torque)
+  // configureBLDCMotor(MotorPoles, NumberofMagnets, Hallsensor, torque)
   MyMotor.configureBLDCMotor(15, 16, 0, 150);
 
   // First Argument: Choose which direction the motor should turn: 0 or 1

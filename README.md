@@ -1,7 +1,7 @@
 # IFX007T-Motor-Control
 IFX007T NovalithIC™ based DC motor control
 
-<img src="https://github.com/Infineon/Assets/blob/master/Pictures/IFX007T_BLDC%20Shield_Pinout.jpg" width="400"> 
+<img src="https://github.com/Infineon/Assets/blob/master/Pictures/IFX007T_BLDC%20Shield_Pinout.jpg" width="500"> 
 
 Library of Infineon's [BLDC motor control shield](https://www.infineon.com/cms/en/product/evaluation-boards/bldc-shield_ifx007t/) for Arduino.
 Refer also to the [Board manual](https://www.infineon.com/dgdl/Infineon-Motor_Control_Shield_with_IFX007T_for_Arduino-UserManual-v02_00-EN.pdf?fileId=5546d462694c98b401696d2026783556).

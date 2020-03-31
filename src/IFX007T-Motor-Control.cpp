@@ -69,7 +69,10 @@ void IFX007TMotorControl::begin(void)
 
 void IFX007TMotorControl::end(void)
 {
-    
+  /* Stop interrupts here */
+  digitalWrite(_PinAssignment[InhibitPin][0], LOW);   // Lock the halfbridges
+  digitalWrite(_PinAssignment[InhibitPin][1], LOW);
+  digitalWrite(_PinAssignment[InhibitPin][2], LOW);
 }
 
 void IFX007TMotorControl::setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle)
@@ -121,6 +124,7 @@ void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle)
  * torque: the dutycycle, the motor is driven with (a value between 0 and 255)
  * 
  * Refer to: https://www.allaboutcircuits.com/industry-articles/3-phase-brushless-dc-motor-control-with-hall-sensors/
+ *           https://www.mikrocontroller.net/articles/Brushless-Controller_für_Modellbaumotoren
  */
 void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor, uint8_t torque)
 {
@@ -141,10 +145,6 @@ void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagne
     _NumberofSteps = (MotorPoles * NrMagnets) / gcd(MotorPoles, NrMagnets);
     _Torque = torque;
 
-    setPwmFrequency(_PinAssignment[InputPin][0], 8);    // set Frequency to 3906 Hz, needed?????
-    setPwmFrequency(_PinAssignment[InputPin][1], 8);
-    setPwmFrequency(_PinAssignment[InputPin][2], 8);
-
 }
 
 /**
@@ -159,7 +159,7 @@ void IFX007TMotorControl::setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed
 }
 
 /**
- * TODO: Program function: adapts the new speed to _lasrBLCDspeed by accelerating the motor
+ * TODO: Program function: adapts the new speed to _lastBLCDspeed by accelerating the motor
  */
 void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t rpmSpeed)
 {
@@ -182,7 +182,10 @@ void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t rpmSpeed)
 }
 
 /**
- * Before each commutation step, the reference voltage is stored in _V_neutral.
+ * Before each commutation step, the reference voltage is stored in _V_neutral. 
+ * _V_neutral is the middle-node voltage simulated by resistors. If now the inducted voltage on the floating wire crosses _V_neutral (zero crossing),
+ * the program knows, that half of the time to commutate has passed.
+ * 
  * TODO: Add explanation! How to set accurate RPM speed? Interrupts!
  */
 void IFX007TMotorControl::DoBEMFCommutation(bool dir)
@@ -261,6 +264,7 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
 
 /**
  * Commutation table for brushless motors
+ * Inhibit Pin = High means active -> Inhibit Pin = Low means output is floating
 */
 void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
 {
@@ -274,54 +278,54 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
 
     switch (CommutationStep) {
       case 0:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][2], LOW);
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
+        digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
         analogWrite(_PinAssignment[InputPin][0], _Torque);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
       case 1:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][1], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
         analogWrite(_PinAssignment[InputPin][0], _Torque);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
       case 2:
-        digitalWrite(_PinAssignment[InhibitPin][0], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+        digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], _Torque);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
       case 3:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][2], LOW);
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], _Torque);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
       case 4:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][1], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
+        digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], _Torque);
         break;
 
       case 5:
-        digitalWrite(_PinAssignment[InhibitPin][0], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+        digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], _Torque);
@@ -396,6 +400,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
 }
 
 /**
+ * TODO: Include function from an external library, as its only usefull for Arduino Platform and not for XMC.
    Divides a given PWM pin frequency by a divisor.
 
    The resulting frequency is equal to the base frequency divided by
