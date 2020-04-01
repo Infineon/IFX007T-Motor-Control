@@ -23,7 +23,7 @@ class IFX007TMotorControl
     //------------- User Functions --------------------------------------------------------------------------------
 
                 IFX007TMotorControl(void);
-                IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW);
+                IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t ADdcU, uint8_t ADdcV, uint8_t AdcW);
                 ~IFX007TMotorControl(void);
         void    begin(void);
         void    end(void);
@@ -53,11 +53,12 @@ class IFX007TMotorControl
         */
         uint8_t _PinAssignment[4][3];
 
+
         uint32_t _V_neutral;
         uint8_t _NumberofSteps;
         uint8_t _Torque;
         uint8_t _Commutation;
-        uint16_t _lastBLCDspeed;
+        uint16_t _lastBLDCspeed;
 
 };
 

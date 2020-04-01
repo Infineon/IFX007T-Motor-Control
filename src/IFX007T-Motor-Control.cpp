@@ -11,30 +11,42 @@
 IFX007TMotorControl::IFX007TMotorControl(void)
 {
     // ----------- Default Pin Assignment ---------------
-    uint8_t _PinAssignment[4][3] =
-    {
-        {11, 10, 9},
-        { 6, 5, 3},
-        {17,16,15},
-        {14,18,19}
-    };
+    _PinAssignment[InputPin][0] = 11;
+    _PinAssignment[InputPin][1] = 10;
+    _PinAssignment[InputPin][2] = 9;
+    _PinAssignment[InhibitPin][0] = 6;
+    _PinAssignment[InhibitPin][1] = 5;
+    _PinAssignment[InhibitPin][2] = 3;
+    _PinAssignment[AdcPin][0] = 17;
+    _PinAssignment[AdcPin][1] = 16;
+    _PinAssignment[AdcPin][2] = 15;
+    _PinAssignment[RefVoltage][0] = 14;
+    _PinAssignment[RefVoltage][1] = 18;
+    _PinAssignment[RefVoltage][2] = 19;
+
 }
 
 /**
  * Constructor 2
  * This Constructor is called, if arguments are given to it.
- * (uint8_t INHU = 6, uint8_t INHV = 5, uint8_t INHW = 3, uint8_t INU = 11, uint8_t INV = 10, uint8_t INW = 9)
  */
-IFX007TMotorControl::IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW)
+IFX007TMotorControl::IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t AdcU, uint8_t AdcV, uint8_t AdcW)
 {
-    uint8_t _PinAssignment[3][3] =
-    {
-        {INU, INV, INW},
-        {INHU, INHV, INHW},
-        {}
-    };
+    _PinAssignment[InputPin][0] = INU;
+    _PinAssignment[InputPin][1] = INV;
+    _PinAssignment[InputPin][2] =INW;
+    _PinAssignment[InhibitPin][0] = INHU;
+    _PinAssignment[InhibitPin][1] = INHV;
+    _PinAssignment[InhibitPin][2] = INHW;
+    _PinAssignment[AdcPin][0] = AdcU;
+    _PinAssignment[AdcPin][1] = AdcV;
+    _PinAssignment[AdcPin][2] = AdcW;
 }
 
+/**
+ * Destructor
+ * Make sure, the motor is stopped, bevore deleting the instance.
+*/
 IFX007TMotorControl:: ~IFX007TMotorControl(void)
 {
     end();
@@ -152,33 +164,38 @@ void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagne
  */
 void IFX007TMotorControl::setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed)
 {
-  if(_lastBLCDspeed != rpmSpeed)
+  if(_lastBLDCspeed != rpmSpeed)
   {
     changeBEMFspeed(direction, rpmSpeed);
   }
 }
 
 /**
- * TODO: Program function: adapts the new speed to _lastBLCDspeed by accelerating the motor
+ * TODO: Program function: adapts the new speed to _lastBLDCspeed by accelerating the motor
  */
 void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t rpmSpeed)
 {
-  uint16_t i = 5000;
-  uint8_t CommStartup = 0;
-  
-  // Startup procedure: start rotating the field slowly and increase the speed    !experimental!
-  while (i>1000) {
-    delayMicroseconds(i);
-    UpdateHardware(CommStartup,0);
-    _Commutation = CommStartup++;
-    if (CommStartup==6) CommStartup=0;
-    i=i-20;
+  if(_lastBLDCspeed == 0)
+  {
+    uint16_t i = 5000;
+    uint8_t CommStartup = 0;
+    
+    // Startup procedure: start rotating the field slowly and increase the speed    !experimental!
+    while (i>1000) {
+      delayMicroseconds(i);
+      UpdateHardware(CommStartup,0);
+      _Commutation = CommStartup++;
+      if (CommStartup==6) CommStartup=0;
+      i=i-20;
+    }
   }
 
-  // main loop:
+  // TODO: The commutation has to be controlled via interrupt!
   while(1) {
     DoBEMFCommutation(direction);
   }
+
+  _lastBLDCspeed = rpmSpeed;
 }
 
 /**
