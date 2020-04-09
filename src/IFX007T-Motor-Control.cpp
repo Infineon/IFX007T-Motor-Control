@@ -57,6 +57,7 @@ IFX007TMotorControl:: ~IFX007TMotorControl(void)
  */
 void IFX007TMotorControl::begin(void)
 {
+    pinMode(12, OUTPUT); //for debugging
     pinMode(_PinAssignment[InhibitPin][0], OUTPUT);
     pinMode(_PinAssignment[InhibitPin][1], OUTPUT);
     pinMode(_PinAssignment[InhibitPin][2], OUTPUT);
@@ -138,8 +139,11 @@ void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle)
  * Refer to: https://www.allaboutcircuits.com/industry-articles/3-phase-brushless-dc-motor-control-with-hall-sensors/
  *           https://www.mikrocontroller.net/articles/Brushless-Controller_für_Modellbaumotoren
  */
-void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor, uint8_t torque)
+void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor)
 {
+    _Commutation = 0;
+    _lastBLDCspeed = 0;
+    _debugPin = 1;
     if(Hallsensor)    //Hall-sensor mode
     {
         #define HALLmode
@@ -151,127 +155,247 @@ void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagne
     else             //BEMF mode
     {
         #define BEMFmode
-        _V_neutral = (((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * torque) >> 8);
-    } 
+        _V_neutral = (((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * _CurrentDutyCycle) >> 8);
 
+        setPwmFrequency(_PinAssignment[InhibitPin][0], 1);  // set Frequency to 31250 Hz
+        setPwmFrequency(_PinAssignment[InhibitPin][1], 1);
+        setPwmFrequency(_PinAssignment[InhibitPin][2], 1);
+    }
+    /*
+    //------ Configure ADC interrupt ------------------------------------------
+
+    uint8_t channel = 3;
+    //Arduino UNO CPU Clock runs with 16MHz
+    ADCSRA = 0;
+    ADCSRB = 0;
+    ADCSRA |= (1<<ADATE)|(1<<ADIE);                   // enable auto trigger and interrupts when measurement is complete
+    //ADCSRA |= (1<<ADPS1)|(1<<ADPS0);                // 8 prescaler for 153kHz sampling rate
+    //ADCSRA |= (1<<ADPS2);                           // 16 prescaler for 76,8kHz sampling rate
+    ADCSRA |= (1<<ADPS2)|(1<<ADPS0);                // 32 prescaler; sampling rate: 38,4kHz; one sample lasts: 26us
+    //ADCSRA |= (1<<ADPS2)|(1<<ADPS1);                // 64 prescaler; sampling rate: 19,2kHz; one sample lasts: 52us
+    ADCSRB |= (0x07 & 0x00);                          //free running mode
+    ADMUX |= (channel & 0x07);                        //choose ADC Port
+    ADMUX |= (1<<REFS0);                               //VDD as referenz
+    
+    //ADCSRA |= (1<<ADEN);                             // enable ADC
+
+    //Do a dummy-measurement to heat up the ADC
+    ADCSRA |= (1<<ADSC);                              // trigger a conversion 
+    //while (ADCSRA & (1<<ADSC) );                    // wait to be finished
+    //(void) ADCW;
+    */
     _NumberofSteps = (MotorPoles * NrMagnets) / gcd(MotorPoles, NrMagnets);
-    _Torque = torque;
-
 }
 
 /**
+ * The Startup procedure of a BLDC motor needs a special handling, as theres no BEMF voltage, when the motor doesn't turn
+ * delayMicroseconds() -> max value: 16383
+ * delay() -> value in milliseconds
+ */
+bool IFX007TMotorControl::StartupBLDC(bool dir)
+{
+  _CurrentDutyCycle = 150;     //For Startup
+  uint16_t i = 8000;
+  /*
+  while(1)
+  {
+    for(_Commutation = 0; _Commutation < 6; _Commutation++)
+    {
+      delay(i);
+      UpdateHardware(_Commutation,dir);
+    }
+  }
+  */
+  
+  /*
+  UpdateHardware(_Commutation,dir);
+  _Commutation += 1;
+  delay(16);
+*/
+
+/*
+ uint16_t BEMFvoltage = 0;
+  while(1)
+  {
+    BEMFvoltage = analogRead(_PinAssignment[AdcPin][0]);
+     DEBUG_PRINT("BEMFvoltage: "); DEBUG_PRINT_LN(BEMFvoltage);
+     delay(50);
+  }
+  */
+
+  
+  // Startup procedure: start rotating the field slowly and increase the speed    !experimental!
+  while (i>1000) {
+    _Commutation ++;
+    if (_Commutation==6) _Commutation=0;
+    delayMicroseconds(i);
+    UpdateHardware(_Commutation,dir);
+    i=i-20;
+  }
+  
+
+  _lastBLDCspeed = 1;
+
+  return 1;
+}
+
+/**
+ * User function
  * TODO: User Function to set a new direction and RPMspeed
  */
 void IFX007TMotorControl::setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed)
 {
   if(_lastBLDCspeed != rpmSpeed)
   {
-    changeBEMFspeed(direction, rpmSpeed);
+    if(_lastBLDCspeed == 0)
+    {
+      while(!StartupBLDC(direction));
+    }
   }
 }
 
 /**
- * TODO: Program function: adapts the new speed to _lastBLDCspeed by accelerating the motor
+ * User function
+ * This way to control the motor speed is more easy than 'setBLDCmotorRPMspeed'.
+ * The user just enters a value between 0 and 255 and thus sets the speed.
+*/
+void IFX007TMotorControl::setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle)
+{
+  
+  if(_lastBLDCspeed == 0)
+  {
+    digitalWrite(12, _debugPin); _debugPin = !_debugPin;
+    while(!StartupBLDC(direction));
+    DEBUG_PRINT_LN("Started up sensorless BLDC motor succesfully.");
+    digitalWrite(12, _debugPin); _debugPin = !_debugPin;
+  }
+  end();    //prevent the engine from short circuit (for testing only)
+  
+  _CurrentDutyCycle = _TargetDutyCycle = dutycycle;
+  changeBEMFspeed(direction, dutycycle);
+}
+
+/**
+ * Private function
+ * TODO:
+ * This function is called by a timer interrupt and implements a PI-regulator. It reads out the current RPM speed,
+ * compares it to the desired RPM speed and adapts the PWM dutycycle.
  */
 void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t rpmSpeed)
 {
-  if(_lastBLDCspeed == 0)
+  while(1)
   {
-    uint16_t i = 5000;
-    uint8_t CommStartup = 0;
-    
-    // Startup procedure: start rotating the field slowly and increase the speed    !experimental!
-    while (i>1000) {
-      delayMicroseconds(i);
-      UpdateHardware(CommStartup,0);
-      _Commutation = CommStartup++;
-      if (CommStartup==6) CommStartup=0;
-      i=i-20;
-    }
-  }
-
-  // TODO: The commutation has to be controlled via interrupt!
-  while(1) {
     DoBEMFCommutation(direction);
   }
-
   _lastBLDCspeed = rpmSpeed;
 }
 
 /**
+ * Private function
  * Before each commutation step, the reference voltage is stored in _V_neutral. 
  * _V_neutral is the middle-node voltage simulated by resistors. If now the inducted voltage on the floating wire crosses _V_neutral (zero crossing),
  * the program knows, that half of the time to commutate has passed.
  * 
- * TODO: Add explanation! How to set accurate RPM speed? Interrupts!
+ * The RPM speed is only set by the PWM duty cycle. The cummutation speed will only be interrupt controlled.
+ * 
+ * TODO: Add explanation! Interrupts!
  */
 void IFX007TMotorControl::DoBEMFCommutation(bool dir)
 {
     dir = dir*2;        // direction can be 0 or 1
+    uint16_t BEMFvoltage = 0;
+    uint8_t iterations = 20;
+    uint16_t timefromzero = 10;
+    
+    digitalWrite(12, _debugPin); _debugPin = !_debugPin;
+    DEBUG_PRINT("_Commutation: "); DEBUG_PRINT_LN(_Commutation);
+    _V_neutral = (((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * _CurrentDutyCycle) >> 8);
+    //_V_neutral = (analogRead(_PinAssignment[RefVoltage][0]));
+    DEBUG_PRINT("_V_neutral: "); DEBUG_PRINT_LN(_V_neutral);
 
-    _V_neutral = (((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * _Torque) >> 8);
-    //_V_neutral = analogRead(BEMF_phase);
+    BEMFvoltage = analogRead(_PinAssignment[AdcPin][0]);
+    DEBUG_PRINT("BEMFvoltage U: "); DEBUG_PRINT_LN(BEMFvoltage);
+    BEMFvoltage = analogRead(_PinAssignment[AdcPin][1]);
+    DEBUG_PRINT("BEMFvoltage V: "); DEBUG_PRINT_LN(BEMFvoltage);
+    BEMFvoltage = analogRead(_PinAssignment[AdcPin][2]);
+    DEBUG_PRINT("BEMFvoltage W: "); DEBUG_PRINT_LN(BEMFvoltage);
 
     switch (_Commutation)
     {
     case 0:
-        for (uint8_t i=0; i< 20; i++) {
-        if (analogRead(_PinAssignment[AdcPin][2-dir]) > _V_neutral) i-=1;
+        for (uint8_t i=0; i< iterations; i++)
+        {
+          BEMFvoltage = analogRead(_PinAssignment[AdcPin][2-dir]);
+          if (BEMFvoltage > _V_neutral) i-=1;
         }
-        if (analogRead(_PinAssignment[AdcPin][2-dir]) < _V_neutral) {
+        DEBUG_PRINT("BEMFvoltage W success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation = 1;
+        delayMicroseconds(timefromzero);
         UpdateHardware(_Commutation,0);          
-        }
         break;
     case 1:
-    
-        for (uint8_t i=0; i< 20; i++) {
-        if (analogRead(_PinAssignment[AdcPin][1]) < _V_neutral) i-=1;
+        for (uint8_t i=0; i< iterations; i++)
+        {
+          BEMFvoltage = analogRead(_PinAssignment[AdcPin][1]);
+          if (BEMFvoltage < _V_neutral) i-=1;
         }
-        if (analogRead(_PinAssignment[AdcPin][1]) > _V_neutral) { 
+        DEBUG_PRINT("BEMFvoltage V success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=2;
+        delayMicroseconds(timefromzero);
         UpdateHardware(_Commutation,0);
-        }
+        
         break;
     case 2:
     
-        for (uint8_t i=0; i< 20; i++) {
-        if (analogRead(_PinAssignment[AdcPin][dir]) > _V_neutral) i-=1;
+        for (uint8_t i=0; i< iterations; i++)
+        {
+          BEMFvoltage = analogRead(_PinAssignment[AdcPin][dir]);
+          if (BEMFvoltage > _V_neutral) i-=1;
         }
-        if (analogRead(_PinAssignment[AdcPin][dir]) < _V_neutral) { 
+        DEBUG_PRINT("BEMFvoltage U success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=3;
+        delayMicroseconds(timefromzero);
         UpdateHardware(_Commutation,0);
-        }
+        
         break;
     case 3:
     
-        for (uint8_t i=0; i< 20; i++) {
-        if (analogRead(_PinAssignment[AdcPin][2-dir]) < _V_neutral) i-=1;
+        for (uint8_t i=0; i< iterations; i++)
+        {
+          BEMFvoltage = analogRead(_PinAssignment[AdcPin][2-dir]);
+          if (BEMFvoltage < _V_neutral) i-=1;
         }
-        if (analogRead(_PinAssignment[AdcPin][2-dir]) > _V_neutral) { 
+        DEBUG_PRINT("BEMFvoltage W success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=4;
+        delayMicroseconds(timefromzero);
         UpdateHardware(_Commutation,0);
-        }
+        
         break;
+
     case 4:
-    
-        for (uint8_t i=0; i< 20; i++) {
-        if (analogRead(_PinAssignment[AdcPin][1]) > _V_neutral) i-=1;
+        for (uint8_t i=0; i< iterations; i++)
+        {
+          BEMFvoltage = analogRead(_PinAssignment[AdcPin][1]);
+          if (BEMFvoltage > _V_neutral) i-=1;
         }
-        if (analogRead(_PinAssignment[AdcPin][1]) < _V_neutral) { 
+        DEBUG_PRINT("BEMFvoltage V success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=5;
+        delayMicroseconds(timefromzero);
         UpdateHardware(_Commutation,0);
-        }
+        
         break;
+
     case 5:
-    
-        for (uint8_t i=0; i< 20; i++) {
-        if (analogRead(_PinAssignment[AdcPin][dir]) < _V_neutral) i-=1;
+        for (uint8_t i=0; i< iterations; i++)
+        {
+          BEMFvoltage = analogRead(_PinAssignment[AdcPin][dir]);
+          if (BEMFvoltage < _V_neutral) i-=1;
         }
-        if (analogRead(_PinAssignment[AdcPin][dir]) > _V_neutral) { 
+        DEBUG_PRINT("BEMFvoltage U success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=0;
+        delayMicroseconds(timefromzero);
         UpdateHardware(_Commutation,0);
-        }
+        
         break;
     default:
     break;
@@ -280,14 +404,166 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
 }
 
 /**
- * Commutation table for brushless motors
- * Inhibit Pin = High means active -> Inhibit Pin = Low means output is floating
-*/
+ * CHANGED
+ * Coummutation Table changed according to ST Application Note
+ * https://www.st.com/resource/en/application_note/cd00043112-back-emf-detection-during-pwm-on-time-by-st7mc-stmicroelectronics.pdf
+ * */
+
 void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
 {
     #ifdef BEMFmode
     // update neutral voltage:
-    _V_neutral = (int)(((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * _Torque) >> 8);
+    //_V_neutral = (int)(((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * _CurrentDutyCycle) >> 8);
+    //digitalWrite(12, _debugPin); _debugPin = !_debugPin;
+    //_V_neutral = (analogRead(_PinAssignment[RefVoltage][0]));
+    //digitalWrite(12, _debugPin); _debugPin = !_debugPin;
+    #endif
+ 
+  //DEBUG_PRINT("Commutation State: ");
+  //DEBUG_PRINT_LN(CommutationStep);
+  //CW direction
+  if (Dir == 0) {
+
+    DEBUG_PRINT("CommutationStep: "); DEBUG_PRINT_LN(CommutationStep);
+
+    switch (CommutationStep) {
+      case 0:
+        analogWrite(_PinAssignment[InhibitPin][0], _CurrentDutyCycle);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);                //GND
+        digitalWrite(_PinAssignment[InhibitPin][2], LOW);                 //Floating
+        digitalWrite(_PinAssignment[InputPin][0], HIGH);
+        analogWrite(_PinAssignment[InputPin][1], 0);
+        analogWrite(_PinAssignment[InputPin][2], 0);
+        break;
+
+      case 1:
+        analogWrite(_PinAssignment[InhibitPin][0], _CurrentDutyCycle);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][1], LOW);                 //Floating
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);                //GND
+        digitalWrite(_PinAssignment[InputPin][0], HIGH);
+        analogWrite(_PinAssignment[InputPin][1], 0);
+        analogWrite(_PinAssignment[InputPin][2], 0);
+        break;
+
+      case 2:
+        digitalWrite(_PinAssignment[InhibitPin][0], LOW);                 //Floating
+        analogWrite(_PinAssignment[InhibitPin][1], _CurrentDutyCycle);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);                //GND
+        analogWrite(_PinAssignment[InputPin][0], 0);
+        digitalWrite(_PinAssignment[InputPin][1], HIGH);
+        analogWrite(_PinAssignment[InputPin][2], 0);
+        break;
+
+      case 3:
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);                //GND
+        analogWrite(_PinAssignment[InhibitPin][1], _CurrentDutyCycle);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][2], LOW);                 //Floating
+        analogWrite(_PinAssignment[InputPin][0], 0);
+        digitalWrite(_PinAssignment[InputPin][1], HIGH);
+        analogWrite(_PinAssignment[InputPin][2], 0);
+        break;
+
+      case 4:
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);                //GND
+        digitalWrite(_PinAssignment[InhibitPin][1], LOW);                 //Floating
+        analogWrite(_PinAssignment[InhibitPin][2], _CurrentDutyCycle);    //PWM
+        analogWrite(_PinAssignment[InputPin][0], 0);
+        analogWrite(_PinAssignment[InputPin][1], 0);
+        digitalWrite(_PinAssignment[InputPin][2], HIGH);
+        break;
+
+      case 5:
+        digitalWrite(_PinAssignment[InhibitPin][0], LOW);                 //Floating
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);                //GND
+        analogWrite(_PinAssignment[InhibitPin][2], _CurrentDutyCycle);    //PWM
+        analogWrite(_PinAssignment[InputPin][0], 0);
+        analogWrite(_PinAssignment[InputPin][1], 0);
+        digitalWrite(_PinAssignment[InputPin][2], HIGH);
+        break;
+
+      default:
+        break;
+    }
+
+  }
+  else {
+    //CCW direction
+    switch (CommutationStep) {
+      case 0:
+        digitalWrite(_PinAssignment[InhibitPin][0], LOW);                 //Floating
+        analogWrite(_PinAssignment[InhibitPin][1], _CurrentDutyCycle);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);                //GND
+        analogWrite(_PinAssignment[InputPin][0], 0);
+        digitalWrite(_PinAssignment[InputPin][1], HIGH);
+        analogWrite(_PinAssignment[InputPin][2], 0);
+        break;
+
+      case 1:
+        analogWrite(_PinAssignment[InhibitPin][0], _CurrentDutyCycle);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][1], LOW);                 //Floating
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);                //GND
+        digitalWrite(_PinAssignment[InputPin][0], HIGH);
+        analogWrite(_PinAssignment[InputPin][1], 0);
+        analogWrite(_PinAssignment[InputPin][2], 0);
+        break;
+
+      case 2:
+        analogWrite(_PinAssignment[InhibitPin][0], _CurrentDutyCycle);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);                //GND
+        digitalWrite(_PinAssignment[InhibitPin][2], LOW);                 //Floating
+        digitalWrite(_PinAssignment[InputPin][0], HIGH);
+        analogWrite(_PinAssignment[InputPin][1], 0);
+        analogWrite(_PinAssignment[InputPin][2], 0);
+        break;
+
+      case 3:
+        digitalWrite(_PinAssignment[InhibitPin][0], LOW);                 //Floating
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);                //GND
+        analogWrite(_PinAssignment[InhibitPin][2], _CurrentDutyCycle);    //PWM
+        analogWrite(_PinAssignment[InputPin][0], 0);
+        analogWrite(_PinAssignment[InputPin][1], 0);
+        digitalWrite(_PinAssignment[InputPin][2], HIGH);
+        break;
+
+      case 4:
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);                //GND
+        digitalWrite(_PinAssignment[InhibitPin][1], LOW);                 //Floating
+        analogWrite(_PinAssignment[InhibitPin][2], _CurrentDutyCycle);    //PWM
+        analogWrite(_PinAssignment[InputPin][0], 0);
+        analogWrite(_PinAssignment[InputPin][1], 0);
+        digitalWrite(_PinAssignment[InputPin][2], HIGH);
+        break;
+
+      case 5:
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);                //GND
+        analogWrite(_PinAssignment[InhibitPin][1], _CurrentDutyCycle);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][2], LOW);                 //Floating
+        analogWrite(_PinAssignment[InputPin][0], 0);
+        digitalWrite(_PinAssignment[InputPin][1], HIGH);
+        analogWrite(_PinAssignment[InputPin][2], 0);
+        break;
+
+      default:
+        break;
+    }
+  }
+}
+
+
+/**
+ * Original
+ * Commutation table for brushless motors (the "6 step Process")
+ * Inhibit Pin = High means active -> Inhibit Pin = Low means output is floating
+*/
+/*
+void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
+{
+    #ifdef BEMFmode
+    // update neutral voltage:
+    //_V_neutral = (int)(((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * _CurrentDutyCycle) >> 8);
+    //digitalWrite(12, _debugPin); _debugPin = !_debugPin;
+    //_V_neutral = (analogRead(_PinAssignment[RefVoltage][0]));
+    //digitalWrite(12, _debugPin); _debugPin = !_debugPin;
     #endif
  
   //CW direction
@@ -298,7 +574,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
         digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
         digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
-        analogWrite(_PinAssignment[InputPin][0], _Torque);
+        analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
@@ -307,7 +583,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
         digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
         digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
-        analogWrite(_PinAssignment[InputPin][0], _Torque);
+        analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
@@ -317,7 +593,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
         digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
         analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], _Torque);
+        analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
@@ -326,7 +602,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
         digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
         analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], _Torque);
+        analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
@@ -336,7 +612,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], _Torque);
+        analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
         break;
 
       case 5:
@@ -345,7 +621,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], _Torque);
+        analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
         break;
 
       default:
@@ -361,7 +637,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
         digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
         analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], _Torque);
+        analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
@@ -369,7 +645,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
         digitalWrite(_PinAssignment[InhibitPin][1], LOW);
         digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
-        analogWrite(_PinAssignment[InputPin][0], _Torque);
+        analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
@@ -378,7 +654,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
         digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
         digitalWrite(_PinAssignment[InhibitPin][2], LOW);
-        analogWrite(_PinAssignment[InputPin][0], _Torque);
+        analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
@@ -389,7 +665,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], _Torque);
+        analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
         break;
 
       case 4:
@@ -398,7 +674,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], _Torque);
+        analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
         break;
 
       case 5:
@@ -406,7 +682,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
         digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
         digitalWrite(_PinAssignment[InhibitPin][2], LOW);
         analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], _Torque);
+        analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
@@ -415,6 +691,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
     }
   }
 }
+*/
 
 /**
  * TODO: Include function from an external library, as its only usefull for Arduino Platform and not for XMC.
@@ -507,4 +784,13 @@ void IFX007TMotorControl::setADCspeedFast(void)
 uint8_t IFX007TMotorControl::gcd(uint8_t a, uint8_t b)
 {
     return b == 0 ? a : gcd(b, a % b);
+}
+
+ISR (ADC_vect)
+{
+  uint16_t adc_data;
+  adc_data = ADC;
+
+  //out = !out;           //for testing
+  //digitalWrite(7, out);
 }

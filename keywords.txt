@@ -15,9 +15,9 @@ begin	KEYWORD2
 end	KEYWORD2
 setUniDirMotorSpeed	KEYWORD2
 setBiDirMotorSpeed	KEYWORD2
-setUniDirMotorSpeed	KEYWORD2
 configureBLDCMotor	KEYWORD2
 setBLDCmotorRPMspeed	KEYWORD2
+setBLDCDutyCyclespeed	KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)

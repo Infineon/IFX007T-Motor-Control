@@ -9,6 +9,16 @@
 //StartUp - Commutation-Counts to switch over to closed-loop
 #define OpenLoopToClosedLoopCount 50
 
+#define DEBUG_IFX007T         //Uncomment, if you wish debug output
+
+#ifdef DEBUG_IFX007T
+    #define DEBUG_PRINT_LN(str)  Serial.println(str)
+    #define DEBUG_PRINT(str)  Serial.print(str)
+#else
+	#define DEBUG_PRINT_LN(str)
+    #define DEBUG_PRINT(str)
+#endif
+
 // --------------- Define row-names for the _PinAssignment - matrix -----------------------------------------------
 #define InputPin 0
 #define InhibitPin 1
@@ -30,14 +40,16 @@ class IFX007TMotorControl
 
         void    setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle);          //For Unidirectional motors; Parameters: motor can be 0, 1 or 2, dutycycle can be 0 - 255
         void    setBiDirMotorSpeed(bool direction, uint8_t dutycycle);          //For Bidirectional motors; Parametrs: direction can be 0 or 1, dutycycle can be 0 - 255
-        void    configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor, uint8_t torque);  
-        void    setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed);                         
+        void    configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor);  
+        void    setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed);
+        void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);                         
 
     //------------- Help functions called by the program itself ----------------------------------------------------
         void    setPwmFrequency(uint8_t pin, uint16_t divisor);
         
 
     private:
+        bool    StartupBLDC(bool dir);                  // Algorithm to start up the motor, as long as theres no BEMF
         void    changeBEMFspeed(bool direction, uint16_t rpmSpeed);
         void    DoBEMFCommutation(bool dir);
         void    UpdateHardware(uint8_t CommutationStep, uint8_t Dir);       //For BLDC motor
@@ -56,9 +68,11 @@ class IFX007TMotorControl
 
         uint32_t _V_neutral;
         uint8_t _NumberofSteps;
-        uint8_t _Torque;
         uint8_t _Commutation;
         uint16_t _lastBLDCspeed;
+        uint8_t _CurrentDutyCycle;
+        uint8_t _TargetDutyCycle;
+        bool _debugPin;
 
 };
 

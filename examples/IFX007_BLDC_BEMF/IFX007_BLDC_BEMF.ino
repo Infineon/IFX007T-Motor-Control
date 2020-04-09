@@ -42,15 +42,15 @@ void setup()
 
   
   // Enter your motor specific values. If you use a Hallsensor set 1, for sensorless application 0.
-  // Torque means, how strong should the electormagnets pull, (0 -> nothing would happen; max 255 -> max torque)
-  // configureBLDCMotor(MotorPoles, NumberofMagnets, Hallsensor, torque)
-  MyMotor.configureBLDCMotor(15, 16, 0, 150);
+  // configureBLDCMotor(MotorPoles, NumberofMagnets, Hallsensor)
+  MyMotor.configureBLDCMotor(15, 16, 0);
 
   // First Argument: Choose which direction the motor should turn: 0 or 1
   // Second Argument: Choose how fast it should turn in Rounds per Minute (RPM): 0 to 65535
   // !! Be carefully, as high speed can damage your motor or injure persons (if its a strong motor) !!
   
-  MyMotor.setBLDCmotorRPMspeed(0, 500);
+  //MyMotor.setBLDCmotorRPMspeed(0, 500);
+  MyMotor.setBLDCDutyCyclespeed(0, 200);
 }
 
 void loop()
