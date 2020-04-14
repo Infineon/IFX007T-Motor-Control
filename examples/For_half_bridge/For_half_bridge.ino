@@ -1,6 +1,5 @@
 /**
- * This example code if for half-bridge application. The Motor should be connected to the Output V and GND/VS
- * 
+ * This example code if for half-bridge application. The Motor should be connected to the Output U and GND
  * Default Pin configuration:
 // Inhabit pins
 int INHU = 6;
@@ -16,21 +15,21 @@ int INW = 9;
 
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'
 IFX007TMotorControl MyMotor = IFX007TMotorControl();
-//To change the Pins, enter your Pin configuration in the brackets.
-//IFX007TMotorControl MyMotor = IFX007TMotorControl(INHU_Pin, INHV_Pin, INHW_Pin, INU_Pin, INV_Pin, INW_Pin);
 
 void setup()
 {
+
   MyMotor.begin();
 
-
-  // First Argument: Choose which Motor to drive: 0 = U, 1 = V, 2 = W
-  // Second Argument: Choose how fast it should turn: a value between 0 and 255
-  
-  MyMotor.setUniDirMotorSpeed(1, 127);
 }
 
 void loop()
 {
-
+  // setUniDirMotorSpeed(MotorNr, speed);
+  // First Argument: Choose which Motor to drive: 0 = U, 1 = V, 2 = W
+  // Second Argument: Choose how fast it should turn: a value between 0 and 255
+  MyMotor.setUniDirMotorSpeed(0, 127);
+  delay(1000);
+  MyMotor.setUniDirMotorSpeed(0, 0);
+  delay(1000);
 }

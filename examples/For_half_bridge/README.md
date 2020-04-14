@@ -1,12 +1,11 @@
 # Half Bridge setup
 
-Status: compiling, not tested
+Status: tested, works fine. 
 Pictures follow.
 
 This example is the easiest way to get into it: Just take a normal DC motor.
-Connect one pin to 'V' and the other pin to ground.
+Connect one pin to 'U' and the other pin to ground.
 The pin assignment between your Arduino Uno and the BLDC shield is as follows:
-
 
 Inhabit pins:
 INHU = 6
@@ -19,3 +18,4 @@ INV = 10
 INW = 9
 
 Plug in your supply voltage for the board (e.g. 12V) and run the code!
+Your motor should run one second with the half of his maximum speed, stop one second and do the same again.

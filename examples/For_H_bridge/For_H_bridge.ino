@@ -14,22 +14,46 @@ int INW = 9;
 */
 #include "IFX007T-Motor-Control.h"
 
+uint8_t steps = 0;
+
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'
 IFX007TMotorControl MyMotor = IFX007TMotorControl();
-//To change the Pins, enter your Pin configuration in the brackets.
-//IFX007TMotorControl MyMotor = IFX007TMotorControl(INHU_Pin, INHV_Pin, INHW_Pin, INU_Pin, INV_Pin, INW_Pin);
 
 void setup()
 {
-  MyMotor.begin();
+  Serial.begin(9600);
+  Serial.println(" Infineon Bidirectional DC motor test! ");
 
-  // First Argument: Choose which direction the Motor should turn
-  // Second Argument: Choose how fast it should turn: a value between 0 and 255
-  
-  MyMotor.setBiDirMotorSpeed(1, 127);
+  MyMotor.begin();
 }
 
 void loop()
 {
-
+  Serial.println("Accelerate forwards");
+  for(steps = 0; steps < 255; steps ++)
+  {
+    // setBiDirMotorSpeed(direction, speed);
+    // First Argument: Choose which direction the Motor should turn: 0 or 1
+    // Second Argument: Choose how fast it should turn: a value between 0 and 255
+    MyMotor.setBiDirMotorSpeed(1, steps);
+    delay(50);
+  }
+  Serial.println("Brake forwards");
+  for(steps = 255; steps > 0; steps --)
+  {
+    MyMotor.setBiDirMotorSpeed(1, steps);
+    delay(50);
+  }
+  Serial.println("Accelerate backwards");
+  for(steps = 0; steps < 255; steps ++)
+  {
+    MyMotor.setBiDirMotorSpeed(0, steps);
+    delay(50);
+  }
+  Serial.println("Brake backwards");
+  for(steps = 255; steps > 0; steps --)
+  {
+    MyMotor.setBiDirMotorSpeed(0, steps);
+    delay(50);
+  }
 }
