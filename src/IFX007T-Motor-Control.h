@@ -4,12 +4,7 @@
 
 #include <Arduino.h>
 
-// --------------- Define BLDC Motor parameters ------------------------------------------------------------------
-
-//StartUp - Commutation-Counts to switch over to closed-loop
-#define OpenLoopToClosedLoopCount 50
-
-#define DEBUG_IFX007T         //Uncomment, if you wish debug output
+//#define DEBUG_IFX007T         //Uncomment, if you wish debug output
 
 #ifdef DEBUG_IFX007T
     #define DEBUG_PRINT_LN(str)  Serial.println(str)
@@ -47,12 +42,14 @@ class IFX007TMotorControl
     //------------- Help functions called by the program itself ----------------------------------------------------
         void    setPwmFrequency(uint8_t pin, uint16_t divisor);
         
+        
 
     private:
         bool    StartupBLDC(bool dir);                  // Algorithm to start up the motor, as long as theres no BEMF
         void    changeBEMFspeed(bool direction, uint16_t rpmSpeed);
-        void    DoBEMFCommutation(bool dir);
+        bool    DoBEMFCommutation(bool dir);
         void    UpdateHardware(uint8_t CommutationStep, uint8_t Dir);       //For BLDC motor
+        void    DebugRoutine(void);
         void    setADCspeedFast(void);
         uint8_t gcd(uint8_t a, uint8_t b);
 
@@ -73,6 +70,10 @@ class IFX007TMotorControl
         uint8_t _CurrentDutyCycle;
         uint8_t _TargetDutyCycle;
         bool _debugPin;
+
+        uint8_t iterations = 3;
+        int16_t phasedelay = 0;
+        uint8_t _V_NeutralOffset  = 100;
 
 };
 

@@ -1,7 +1,9 @@
 # Setup for BEMF Brushlessmotor
 
-Status: compiling, not tested, not working
+Status: tested, works under specific conditions, some parameters may be adjusted for a different motor, explanation follows.
+
 Pictures follow.
+
 
 ## The Theory
 BEMF means **Back-Electromotive Force** and is a common way, to drive a brushless motor **without a sensor**.

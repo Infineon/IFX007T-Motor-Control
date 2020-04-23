@@ -26,8 +26,6 @@ ADC_VS = A0
 //#define ARM_XMC
 //#define AVR_Arduino
 
-uint16_t RefRPM = 0;
-
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'
 IFX007TMotorControl MyMotor = IFX007TMotorControl();
 //To change the Pins, enter your Pin configuration in the brackets.
@@ -50,20 +48,10 @@ void setup()
   // !! Be carefully, as high speed can damage your motor or injure persons (if its a strong motor) !!
   
   //MyMotor.setBLDCmotorRPMspeed(0, 500);
-  MyMotor.setBLDCDutyCyclespeed(0, 200);
+  //MyMotor.setBLDCDutyCyclespeed(0, 130);
 }
 
 void loop()
 {
-  if (Serial.available() > 0) {
-    byte in = Serial.read();
-    if (in == '+') RefRPM+=100;  //RefRPM + 100
-    if (in == '-') RefRPM-=100;   //RefRPM - 100
-    Serial.print("Actual Speed: ");
-    Serial.print(RefRPM);
-    Serial.println(" RPM");
-
-    MyMotor.setBLDCmotorRPMspeed(0, RefRPM);
-  }
-
+  MyMotor.setBLDCDutyCyclespeed(0, 180);
 }
