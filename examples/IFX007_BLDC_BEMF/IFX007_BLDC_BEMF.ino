@@ -21,15 +21,11 @@ ADC_VS = A0
 */
 
 #include "IFX007T-Motor-Control.h"
+byte DutyCycle = 1;
 
-// Choose which microcontroller board you have
-//#define ARM_XMC
-//#define AVR_Arduino
 
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'
 IFX007TMotorControl MyMotor = IFX007TMotorControl();
-//To change the Pins, enter your Pin configuration in the brackets.
-//IFX007TMotorControl MyMotor = IFX007TMotorControl(INHU_Pin, INHV_Pin, INHW_Pin, INU_Pin, INV_Pin, INW_Pin);
 
 void setup()
 {
@@ -37,21 +33,22 @@ void setup()
   Serial.println(" Infineon BLDC motor test! ");
 
   MyMotor.begin();
-
   
   // Enter your motor specific values. If you use a Hallsensor set 1, for sensorless application 0.
   // configureBLDCMotor(MotorPoles, NumberofMagnets, Hallsensor)
   MyMotor.configureBLDCMotor(15, 16, 0);
 
   // First Argument: Choose which direction the motor should turn: 0 or 1
-  // Second Argument: Choose how fast it should turn in Rounds per Minute (RPM): 0 to 65535
+  // Second Argument: Choose how fast it should turn 0 to 255
   // !! Be carefully, as high speed can damage your motor or injure persons (if its a strong motor) !!
-  
-  //MyMotor.setBLDCmotorRPMspeed(0, 500);
-  //MyMotor.setBLDCDutyCyclespeed(0, 130);
 }
 
 void loop()
 {
-  MyMotor.setBLDCDutyCyclespeed(0, 180);
+  MyMotor.setBLDCDutyCyclespeed(0, DutyCycle);
+  if (Serial.available() > 0)
+  {
+    byte in = Serial.read();
+    MyMotor.DebugRoutine(in);
+  }
 }

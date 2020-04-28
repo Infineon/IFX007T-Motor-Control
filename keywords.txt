@@ -18,6 +18,7 @@ setBiDirMotorSpeed	KEYWORD2
 configureBLDCMotor	KEYWORD2
 setBLDCmotorRPMspeed	KEYWORD2
 setBLDCDutyCyclespeed	KEYWORD2
+DebugRoutine	KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)

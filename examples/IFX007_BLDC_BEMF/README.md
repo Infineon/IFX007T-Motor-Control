@@ -1,6 +1,6 @@
 # Setup for BEMF Brushlessmotor
 
-Status: tested, works under specific conditions, some parameters may be adjusted for a different motor, explanation follows.
+Status: tested on Arduino UNO, works well if Dutycyclespeed is not higher than 160, some parameters may be adjusted for a different motor
 
 Pictures follow.
 
@@ -15,6 +15,25 @@ Connect the three wires of your brushless motor to the 'U V W' outputs of the bo
 Connect a voltage supply, suited to the motor you want to control (typically 12V or 24V).
 **Do not use a supply voltage higher than 24V, as this might damage your microcontroller board!**
 
+## Software
+In your first attempt, leave one hand of the main power switch of your BLDC shield in case of malfunction and give it a try.
+If it starts turning slowly, then suddenly gets boosted and keeps turning with high speed: Congratulations!
+If it doesn't turn at all but makes a squeezing noise, you first have to change some values, I'll explain the process here in the near future.
+
+### .setBLDCDutyCyclespeed(direction, DutyCycle)
+Use this function only in a continous loop without any time-critical code next to it (just like in the example sketch).
+The paramter direction can be 0 or 1.
+The parameter DutyCycle can be 0 to 255 but it has a bonus feature:
+If you set it to 1, you can control the speed via the serial monitor, by entering 't' to increase speed or 'g' to reduce the speed.
+Values till 20 will be set to 0, as this duty cycle is too low, to keep the BLDC running.
+
+### Keybord commands for tuning
+|            | **Speed** | **V_neutralOffset** | **Phasedelay** | **Iterations** |
+|       ---|---|---|---|---|
+|**UP**  |t|r|e|w|
+|**Down**|g|f|d|s|
+
+
 ## Default Pin Assignment
 
 |            | **U** | **V** | **W** |
@@ -24,7 +43,3 @@ Connect a voltage supply, suited to the motor you want to control (typically 12V
 |**ADC / Hall**| 17  | 16    | 15    |
 |**ADC_VS** | 14 | | |
 
-## Software
-To set an accourate RPM speed, you need to have the following information of your motor:
-How many poles/teeth does it have (must be a multiple of 3)?
-How many Magnetic Poles does it have (must be a multiple of 2)?

@@ -4,14 +4,18 @@
 
 #include <Arduino.h>
 
-//#define DEBUG_IFX007T         //Uncomment, if you wish debug output
+//======= Very Important ========
+//#define DEBUG_IFX007T         //Uncomment, if you wish debug output or tune the motor (Disables automatic V_neutralOffset)
+//===============================
 
 #ifdef DEBUG_IFX007T
     #define DEBUG_PRINT_LN(str)  Serial.println(str)
     #define DEBUG_PRINT(str)  Serial.print(str)
+    #define TRIGGER_PIN  digitalWrite(12, _debugPin); _debugPin = !_debugPin;
 #else
 	#define DEBUG_PRINT_LN(str)
     #define DEBUG_PRINT(str)
+    #define TRIGGER_PIN
 #endif
 
 // --------------- Define row-names for the _PinAssignment - matrix -----------------------------------------------
@@ -38,6 +42,7 @@ class IFX007TMotorControl
         void    configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor);  
         void    setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed);
         void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);                         
+        void    DebugRoutine(uint8_t Serialinput);
 
     //------------- Help functions called by the program itself ----------------------------------------------------
         void    setPwmFrequency(uint8_t pin, uint16_t divisor);
@@ -46,10 +51,10 @@ class IFX007TMotorControl
 
     private:
         bool    StartupBLDC(bool dir);                  // Algorithm to start up the motor, as long as theres no BEMF
-        void    changeBEMFspeed(bool direction, uint16_t rpmSpeed);
-        bool    DoBEMFCommutation(bool dir);
+        void    changeBEMFspeed(bool direction, uint16_t dutycycle);
+        void    DoBEMFCommutation(bool dir);
         void    UpdateHardware(uint8_t CommutationStep, uint8_t Dir);       //For BLDC motor
-        void    DebugRoutine(void);
+        
         void    setADCspeedFast(void);
         uint8_t gcd(uint8_t a, uint8_t b);
 
@@ -70,7 +75,9 @@ class IFX007TMotorControl
         uint8_t _CurrentDutyCycle;
         uint8_t _TargetDutyCycle;
         bool _debugPin;
+        uint16_t _Stepcounter = 0;
 
+        // Values to start with, if debug option is turned on
         uint8_t iterations = 3;
         int16_t phasedelay = 0;
         uint8_t _V_NeutralOffset  = 100;
