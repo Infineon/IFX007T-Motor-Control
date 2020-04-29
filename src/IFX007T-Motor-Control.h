@@ -32,7 +32,7 @@ class IFX007TMotorControl
     //------------- User Functions --------------------------------------------------------------------------------
 
                 IFX007TMotorControl(void);
-                IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t ADdcU, uint8_t ADdcV, uint8_t AdcW);
+                IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t ADdcU, uint8_t ADdcV, uint8_t AdcW); // Maybe I would create a structure somewhere and pass this structure as argument instead of all this variables. That would more user friendly in my opinion
                 ~IFX007TMotorControl(void);
         void    begin(void);
         void    end(void);
