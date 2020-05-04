@@ -21,7 +21,8 @@ ADC_VS = A0
 */
 
 #include "IFX007T-Motor-Control.h"
-byte DutyCycle = 1;
+uint8_t DutyCycle = 1;
+bool direction = 0;
 
 
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'
@@ -33,22 +34,26 @@ void setup()
   Serial.println(" Infineon BLDC motor test! ");
 
   MyMotor.begin();
-  
-  // Enter your motor specific values. If you use a Hallsensor set 1, for sensorless application 0.
-  // configureBLDCMotor(MotorPoles, NumberofMagnets, Hallsensor)
-  MyMotor.configureBLDCMotor(15, 16, 0);
 
-  // First Argument: Choose which direction the motor should turn: 0 or 1
-  // Second Argument: Choose how fast it should turn 0 to 255
-  // !! Be carefully, as high speed can damage your motor or injure persons (if its a strong motor) !!
+  uint8_t MotorPoles = 12;              // Count the coils in your motor.
+  uint8_t NumberofMagnets = 16;
+  bool SensingMode = 0;                 // If you use a Hallsensor set 1 (not yet implemented), for sensorless application 0
+
+  
+  // Enter your motor specific values.
+  MyMotor.configureBLDCMotor(MotorPoles, NumberofMagnets, SensingMode);
+
 }
 
 void loop()
 {
-  MyMotor.setBLDCDutyCyclespeed(0, DutyCycle);
+  // First Argument: Choose which direction the motor should turn: 0 or 1
+  // Second Argument: Choose how fast it should turn 0 to 255
+  MyMotor.setBLDCDutyCyclespeed(direction, DutyCycle);
+
   if (Serial.available() > 0)
   {
-    byte in = Serial.read();
-    MyMotor.DebugRoutine(in);
+    uint8_t in = Serial.read();
+    MyMotor.DebugRoutine(in);           //To set speed (and Parameters) via Keyboard input. See Documentation. 
   }
 }

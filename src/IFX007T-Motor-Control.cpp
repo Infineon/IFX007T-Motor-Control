@@ -233,7 +233,10 @@ void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t dutycycle)
   DoBEMFCommutation(direction);
   if((_Stepcounter) > 1000)
   {
-    if(_lastBLDCspeed < 2) _lastBLDCspeed = 2;
+    if(_lastBLDCspeed < 2){
+      _lastBLDCspeed = 2;
+      _CurrentDutyCycle = 140;
+    }
     if(dutycycle != 1) _CurrentDutyCycle = dutycycle;           // dutycycle = 1 means keyboard controlled dutycycle
     if(dutycycle > 1 && dutycycle < 20) _CurrentDutyCycle = 0;  // Values < 20 make no sense, as its to less to keep the motor runnning
   }
@@ -255,11 +258,9 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
 {
     dir = dir*2;                      // direction can be 0 or 1
     uint16_t BEMFvoltage = 0;
-    uint32_t timerstart;
     uint16_t timefromzero = 0;
  
-    TRIGGER_PIN;                      // Toggle Debug Pin
-    //DEBUG_PRINT("_Commutation: "); DEBUG_PRINT_LN(_Commutation);
+    
 
     #ifndef DEBUG_IFX007T
       if(_lastBLDCspeed > 1)
@@ -272,13 +273,14 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
     {
       //phasedelay = (uint8_t) (_CurrentDutyCycle * (4.0/3.0)-203.3);
     }
-    else phasedelay = 0;
+    else phasedelay = 90;
 
     #endif
 
     _V_neutral = (uint32_t) (analogRead(_PinAssignment[RefVoltage][0]) * (_CurrentDutyCycle/255.0)+0.5)-_V_NeutralOffset;
 
-    timerstart= micros();             // Store the time, when last commutation occured
+    TRIGGER_PIN;                      // Toggle Debug Pin
+
     switch (_Commutation)
     {
     case 0:
@@ -287,7 +289,6 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
           BEMFvoltage = analogRead(_PinAssignment[AdcPin][2-dir]);
           if (BEMFvoltage > _V_neutral) i-=1;
         }
-        //DEBUG_PRINT("BEMFvoltage W success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation = 1;         
         break;
     case 1:
@@ -296,7 +297,6 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
           BEMFvoltage = analogRead(_PinAssignment[AdcPin][1]);
           if (BEMFvoltage < _V_neutral) i-=1;
         }
-        //DEBUG_PRINT("BEMFvoltage V success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=2;
         break;
     case 2:
@@ -306,7 +306,6 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
           BEMFvoltage = analogRead(_PinAssignment[AdcPin][dir]);
           if (BEMFvoltage > _V_neutral) i-=1;
         }
-        //DEBUG_PRINT("BEMFvoltage U success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=3;      
         break;
     case 3:
@@ -316,7 +315,6 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
           BEMFvoltage = analogRead(_PinAssignment[AdcPin][2-dir]);
           if (BEMFvoltage < _V_neutral) i-=1;
         }
-        //DEBUG_PRINT("BEMFvoltage W success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=4;
         break;
 
@@ -326,7 +324,6 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
           BEMFvoltage = analogRead(_PinAssignment[AdcPin][1]);
           if (BEMFvoltage > _V_neutral) i-=1;
         }
-        //DEBUG_PRINT("BEMFvoltage V success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=5;
         break;
 
@@ -336,7 +333,6 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
           BEMFvoltage = analogRead(_PinAssignment[AdcPin][dir]);
           if (BEMFvoltage < _V_neutral) i-=1;
         }
-        //DEBUG_PRINT("BEMFvoltage U success: "); DEBUG_PRINT_LN(BEMFvoltage);
         _Commutation=0;
         break;
     default:
@@ -346,9 +342,12 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
     timefromzero = micros()-timerstart-phasedelay; //Calculate the passed time, since the last commutation
 
     delayMicroseconds(timefromzero);               // Timing is very important. When zero crossing occured, only half of the time has passed.
-    UpdateHardware(_Commutation,dir);
-    //DEBUG_PRINT("Timefromzero: "); DEBUG_PRINT_LN(timefromzero);
-    TRIGGER_PIN;
+
+    UpdateHardware(_Commutation,dir);              // Commutate: Set the new pin configuration for the next step
+
+    TRIGGER_PIN;                                   // Toggle Debug Pin
+    timerstart= micros();                          // Store the time, when last commutation occured
+    
 }
 
 /**
@@ -376,12 +375,12 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
       Serial.println(iterations);
     }
     if (Serialinput == 'e'){
-      phasedelay+=5;
+      phasedelay+=2;
       Serial.print("phasedelay (us): ");
       Serial.println(phasedelay);
     }
     if (Serialinput == 'd'){
-      phasedelay-=5;
+      phasedelay-=2;
       Serial.print("phasedelay (us): ");
       Serial.println(phasedelay);
     }
@@ -407,24 +406,21 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
       Serial.print("_CurrentDutyCycle: ");
       Serial.println(_CurrentDutyCycle);
     }
+    /*
+    if ((Serialinput >= '0') && (Serialinput <= '255')){
+      _CurrentDutyCycle = Serialinput;
+      Serial.print("_CurrentDutyCycle: ");
+      Serial.println(_CurrentDutyCycle);
+    }
+    */
 }
 
 /**
- * Original
  * Commutation table for brushless motors (the "6 step Process")
  * Inhibit Pin = High means active -> Inhibit Pin = Low means output is floating
 */
-
 void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
 {
-    #ifdef BEMFmode
-    // update neutral voltage:
-    //_V_neutral = (int)(((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * _CurrentDutyCycle) >> 8);
-    //digitalWrite(12, _debugPin); _debugPin = !_debugPin;
-    //_V_neutral = (analogRead(_PinAssignment[RefVoltage][0]));
-    //digitalWrite(12, _debugPin); _debugPin = !_debugPin;
-    #endif
- 
   //CW direction
   if (Dir == 0) {
 
@@ -643,14 +639,3 @@ uint8_t IFX007TMotorControl::gcd(uint8_t a, uint8_t b)
 {
     return b == 0 ? a : gcd(b, a % b);
 }
-
-/*
-ISR (ADC_vect)
-{
-  uint16_t adc_data;
-  adc_data = ADC;
-
-  //out = !out;           //for testing
-  //digitalWrite(7, out);
-}
-*/

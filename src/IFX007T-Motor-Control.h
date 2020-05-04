@@ -4,9 +4,7 @@
 
 #include <Arduino.h>
 
-//======= Very Important ========
-//#define DEBUG_IFX007T         //Uncomment, if you wish debug output or tune the motor (Disables automatic V_neutralOffset)
-//===============================
+//#define DEBUG_IFX007T         //Uncomment, if you wish debug output
 
 #ifdef DEBUG_IFX007T
     #define DEBUG_PRINT_LN(str)  Serial.println(str)
@@ -76,10 +74,11 @@ class IFX007TMotorControl
         uint8_t _TargetDutyCycle;
         bool _debugPin;
         uint16_t _Stepcounter = 0;
+        uint32_t timerstart;
 
         // Values to start with, if debug option is turned on
         uint8_t iterations = 3;
-        int16_t phasedelay = 0;
+        int16_t phasedelay = 80;
         uint8_t _V_NeutralOffset  = 100;
 
 };
