@@ -1,0 +1,31 @@
+#######################################
+# Syntax Coloring Map For 
+# IFX007T-Motor-Control
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	KEYWORD2
+end	KEYWORD2
+setUniDirMotorSpeed	KEYWORD2
+setBiDirMotorSpeed	KEYWORD2
+configureBLDCMotor	KEYWORD2
+setBLDCmotorRPMspeed	KEYWORD2
+setBLDCDutyCyclespeed	KEYWORD2
+DebugRoutine	KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+IFX007TMotorControl	KEYWORD1
+
+#######################################
+# Constants (LITERAL1)
+#######################################

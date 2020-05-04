@@ -1,6 +1,8 @@
 ////This example code is for sensorless BLDC motor control 
 //Please be noticed it has to be modified for diffenrent motor 
 
+#include <Arduino.h>
+
 //Define Inputs & Outputs
 #define PWM_U 11
 #define PWM_V 10
@@ -28,14 +30,20 @@
 //StartUp - Commutation-Counts to switch over to closed-loop
 #define OpenLoopToClosedLoopCount 50
 
-
-
 uint8_t Commutation = 0;
 uint8_t BEMF_phase = A1;
 uint8_t ClosedLoop = 0;
 uint8_t DutyCycle = 150;
 uint8_t Dir = 0;
 uint32_t V_neutral = 0;
+
+// ---- Forward Declaration-------
+void DoCommutation(void);
+void UpdateHardware(uint8_t CommutationStep, uint8_t Dir);
+void setADCspeedFast(void);
+void setPwmFrequency(int pin, int divisor);
+
+
 void setup() {
 
   Serial.begin(115200);
@@ -84,7 +92,7 @@ void loop() {
 
 
 
-void DoCommutation() {
+void DoCommutation(void) {
 V_neutral = (((uint32_t)analogRead(ADC_VS) * DutyCycle) >> 8);
   //V_neutral = analogRead(BEMF_phase);
 
