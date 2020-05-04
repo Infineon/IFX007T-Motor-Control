@@ -161,7 +161,7 @@ void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagne
         //setPwmFrequency(_PinAssignment[InhibitPin][1], 1);
         //setPwmFrequency(_PinAssignment[InhibitPin][2], 1);
     }
-    _NumberofSteps = (MotorPoles * NrMagnets) / gcd(MotorPoles, NrMagnets);
+    _NumberofSteps = (MotorPoles * NrMagnets) / gcd(MotorPoles, NrMagnets); // Does this function has an advantage instead of saying (pole_pair_count * 6), which should also be the number of steps?
 }
 
 /**
