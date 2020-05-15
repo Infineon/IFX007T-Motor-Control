@@ -4,7 +4,9 @@
 
 #include <Arduino.h>
 
-//#define DEBUG_IFX007T         //Uncomment, if you wish debug output
+//======= Very important ========
+//#define DEBUG_IFX007T         //Uncomment, if you wish debug output or tune the motor (Disables automatic V_neutralOffset)
+//===============================
 
 #ifdef DEBUG_IFX007T
     #define DEBUG_PRINT_LN(str)  Serial.println(str)
@@ -22,28 +24,42 @@
 #define AdcPin 2
 #define RefVoltage 3
 
+typedef struct
+    {
+        uint8_t MotorPoles;
+        bool SensingMode;
+        float V_neutral[4];
+        float V_neutralFunct[2];        //Slope, offset
+        float Phasedelay[4];
+        float PhasedelayFunct[2];       //Slope, offset
+    }BLDCParameter;
+
 //================ Class Definition ===============================================================================
 class IFX007TMotorControl
 {
     public:
 
+    
+
     //------------- User Functions --------------------------------------------------------------------------------
 
                 IFX007TMotorControl(void);
-                IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t ADdcU, uint8_t ADdcV, uint8_t AdcW); // Maybe I would create a structure somewhere and pass this structure as argument instead of all this variables. That would more user friendly in my opinion
+                IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t ADdcU, uint8_t ADdcV, uint8_t AdcW);
                 ~IFX007TMotorControl(void);
         void    begin(void);
         void    end(void);
 
         void    setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle);          //For Unidirectional motors; Parameters: motor can be 0, 1 or 2, dutycycle can be 0 - 255
         void    setBiDirMotorSpeed(bool direction, uint8_t dutycycle);          //For Bidirectional motors; Parametrs: direction can be 0 or 1, dutycycle can be 0 - 255
-        void    configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor);  
+        void    configureBLDCMotor(BLDCParameter MyParameters);  
         void    setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed);
         void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);                         
         void    DebugRoutine(uint8_t Serialinput);
+        
+    //------------- Variables ----------------------------------------------------
+        BLDCParameter MotorParam;
 
-    //------------- Help functions called by the program itself ----------------------------------------------------
-        void    setPwmFrequency(uint8_t pin, uint16_t divisor);
+        
         
         
 
@@ -52,6 +68,8 @@ class IFX007TMotorControl
         void    changeBEMFspeed(bool direction, uint16_t dutycycle);
         void    DoBEMFCommutation(bool dir);
         void    UpdateHardware(uint8_t CommutationStep, uint8_t Dir);       //For BLDC motor
+        void    calculateLinearFunction(float *array, float *result);
+        void    setPwmFrequency(uint8_t pin, uint16_t divisor);
         
         void    setADCspeedFast(void);
         uint8_t gcd(uint8_t a, uint8_t b);
@@ -66,7 +84,7 @@ class IFX007TMotorControl
         uint8_t _PinAssignment[4][3];
 
 
-        uint32_t _V_neutral;
+        uint16_t _V_neutral;
         uint8_t _NumberofSteps;
         uint8_t _Commutation;
         uint16_t _lastBLDCspeed;
@@ -78,7 +96,7 @@ class IFX007TMotorControl
 
         // Values to start with, if debug option is turned on
         uint8_t iterations = 3;
-        int16_t phasedelay = 80;
+        int16_t phasedelay = 100;
         uint8_t _V_NeutralOffset  = 100;
 
 };

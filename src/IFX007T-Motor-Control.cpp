@@ -1,5 +1,8 @@
 /**
  * IFX007T-Motor-Control.cpp    -   Library for Arduino to control the BLDC Motor Shield with IFX007T Motor driver.
+ * 
+ * TODO:
+ * Implement RPM Function for sensorless BLDC
  */
 
 #include "IFX007T-Motor-Control.h"
@@ -139,15 +142,16 @@ void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle)
  * Refer to: https://www.allaboutcircuits.com/industry-articles/3-phase-brushless-dc-motor-control-with-hall-sensors/
  *           https://www.mikrocontroller.net/articles/Brushless-Controller_für_Modellbaumotoren
  */
-void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor)
+void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
 {
     _Commutation = 0;
     _lastBLDCspeed = 0;
     _debugPin = 1;
-    if(Hallsensor)    //Hall-sensor mode
+    
+
+    if(MyParameters.SensingMode)    //Hall-sensor mode (Not supported yet)
     {
         #define HALLmode
-
         pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
@@ -155,14 +159,24 @@ void IFX007TMotorControl::configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagne
     else             //BEMF mode
     {
         #define BEMFmode
-        _V_neutral = (((uint32_t)analogRead(_PinAssignment[RefVoltage][0]) * _CurrentDutyCycle) >> 8);    //Dummy measurement
-
-        //setPwmFrequency(_PinAssignment[InhibitPin][0], 1);  // set Frequency to 31250 Hz
-        //setPwmFrequency(_PinAssignment[InhibitPin][1], 1);
-        //setPwmFrequency(_PinAssignment[InhibitPin][2], 1);
+        _V_neutral = analogRead(_PinAssignment[RefVoltage][0]);    //Dummy measurement
+        MotorParam = MyParameters;                                 //Store the parameters in a global variable
+        calculateLinearFunction(MyParameters.V_neutral, MotorParam.V_neutralFunct);
+        calculateLinearFunction(MyParameters.Phasedelay,  MotorParam.PhasedelayFunct);
     }
-    _NumberofSteps = (MotorPoles * NrMagnets) / gcd(MotorPoles, NrMagnets); // Does this function has an advantage instead of saying (pole_pair_count * 6), which should also be the number of steps?
+    //_NumberofSteps = (MotorPoles * NrMagnets) / gcd(MotorPoles, NrMagnets);
 }
+
+
+/**
+ * Calculates the slope and offset out of two given points
+ */
+void IFX007TMotorControl::calculateLinearFunction(float *array, float *result)
+{
+  result[0] = (array[3]-array[1])/(array[2]-array[0]);                  //slope
+  result[1] = array[1]-(result[0] * array[0]);                    //offset
+}
+
 
 /**
  * Program function
@@ -207,6 +221,9 @@ void IFX007TMotorControl::setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed
  * User function
  * This way to control the motor speed is more easy than 'setBLDCmotorRPMspeed'.
  * The user just enters a value between 0 and 255 and thus sets the speed.
+ * @param direction can be 0 or 1 (forward or backward)
+ * @param dutycycle can be a value between 0 and 255 to set the speed.
+ *                  dutycycle = 1 has a special behaviour, as this enables the speed control via the keyboard input.
 */
 void IFX007TMotorControl::setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle)
 {
@@ -219,14 +236,18 @@ void IFX007TMotorControl::setBLDCDutyCyclespeed(bool direction, uint8_t dutycycl
     delayMicroseconds(12);
     TRIGGER_PIN;
   }
+  
+  //_CurrentDutyCycle = _TargetDutyCycle = dutycycle;
   changeBEMFspeed(direction, dutycycle);
 }
 
 /**
  * Private function
- * TODO:
- * This function is called by a timer interrupt and implements a PI-regulator. It reads out the current RPM speed,
- * compares it to the desired RPM speed and adapts the PWM dutycycle.
+ * This function supervises the behavior of the current duty cycle and makes shure that the moter accelerates to the desired dutycycle after it has been started up.
+ * Therefore we have the global _lastBLDCspeed variable, which has three possible states:
+ * _lastBLDC = 0:   the motor is turned of
+ * _lastBLDC = 1:   the motor has passed the startup algorithm
+ * _lastBlDC = 2:   the motor has accelerated to the desired dutycycle and runs stable in BEMF mode
  */
 void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t dutycycle)
 {
@@ -235,7 +256,7 @@ void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t dutycycle)
   {
     if(_lastBLDCspeed < 2){
       _lastBLDCspeed = 2;
-      _CurrentDutyCycle = 140;
+      _CurrentDutyCycle = 100;                                   //Default dutycycle after startup (necessary for keyboard speed input)
     }
     if(dutycycle != 1) _CurrentDutyCycle = dutycycle;           // dutycycle = 1 means keyboard controlled dutycycle
     if(dutycycle > 1 && dutycycle < 20) _CurrentDutyCycle = 0;  // Values < 20 make no sense, as its to less to keep the motor runnning
@@ -263,21 +284,22 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
     
 
     #ifndef DEBUG_IFX007T
-      if(_lastBLDCspeed > 1)
+      if((_lastBLDCspeed > 1) && (_lastBLDCspeed != _CurrentDutyCycle))   // Update only, when motor has accelerated and Dutycycle changed
       {
-        _V_NeutralOffset = (uint8_t) (_CurrentDutyCycle * (51.0/70.0)+12.5);    //Calculate the Offset voltage according to my measurements (its linear and proportional to Dutycycle)
-        if(_V_NeutralOffset > 130) _V_NeutralOffset  = 130;
-        if(_V_NeutralOffset < 38) _V_NeutralOffset  = 38;
+        _V_NeutralOffset = (uint8_t) (_CurrentDutyCycle * MotorParam.V_neutralFunct[0] + MotorParam.V_neutralFunct[1]);    //Calculate the Offset voltage according to my measurements (its linear and proportional to Dutycycle)
+        if(_V_NeutralOffset > MotorParam.V_neutral[1]) _V_NeutralOffset = MotorParam.V_neutral[1];
+        if(_V_NeutralOffset < MotorParam.V_neutral[3]) _V_NeutralOffset = MotorParam.V_neutral[3];
+
+        phasedelay = (uint8_t) (_CurrentDutyCycle * MotorParam.PhasedelayFunct[0] + MotorParam.PhasedelayFunct[1]);
+        if(phasedelay > MotorParam.Phasedelay[1]) phasedelay = 120;
+        if(phasedelay < MotorParam.Phasedelay[3]) phasedelay = MotorParam.Phasedelay[3];
+
+        _lastBLDCspeed = _CurrentDutyCycle;
       }
-    if(_CurrentDutyCycle>159)                                               //Adapt the phasedelay for high speed
-    {
-      //phasedelay = (uint8_t) (_CurrentDutyCycle * (4.0/3.0)-203.3);
-    }
-    else phasedelay = 90;
 
     #endif
 
-    _V_neutral = (uint32_t) (analogRead(_PinAssignment[RefVoltage][0]) * (_CurrentDutyCycle/255.0)+0.5)-_V_NeutralOffset;
+    _V_neutral = (uint16_t) (analogRead(_PinAssignment[RefVoltage][0]) * (_CurrentDutyCycle/255.0)+0.5)-_V_NeutralOffset;
 
     TRIGGER_PIN;                      // Toggle Debug Pin
 
@@ -375,12 +397,12 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
       Serial.println(iterations);
     }
     if (Serialinput == 'e'){
-      phasedelay+=2;
+      phasedelay+=3;
       Serial.print("phasedelay (us): ");
       Serial.println(phasedelay);
     }
     if (Serialinput == 'd'){
-      phasedelay-=2;
+      phasedelay-=3;
       Serial.print("phasedelay (us): ");
       Serial.println(phasedelay);
     }
@@ -398,12 +420,12 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
 
     if (Serialinput == 't' && _CurrentDutyCycle < 255){
       _CurrentDutyCycle+=5;
-      Serial.print("_CurrentDutyCycle: ");
+      Serial.print("DC: ");
       Serial.println(_CurrentDutyCycle);
     }
     if (Serialinput == 'g' && _CurrentDutyCycle > 0){
       _CurrentDutyCycle-=5;
-      Serial.print("_CurrentDutyCycle: ");
+      Serial.print("DC: ");
       Serial.println(_CurrentDutyCycle);
     }
     /*
