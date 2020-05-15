@@ -20,28 +20,32 @@ If it doesn't turn at all but makes a squeezing noise, switch off your power sup
 
 ## Software
 If your motor starts turning slowly for about 3 seconds but then gets stuck, you'll need to read the following.
-The library controls two parameters, that depend on the current dutycycle: They are called *V_netral Offset* and *Phasedelay*.
-As explained above, the program needs to detect, when it's the right moment to commutate. This is done by camparing the inducted BEMF voltage on the floating phase with a simulated neutral voltage, which should be exact the (scaled) half of your supply voltage. But as this is not precise enough, you have to subtract a value (exactly! I'm talking about *V_neutral Offset*). [Include Picture ...]
-Now you know, when half of the time to commutate has passed, however you have to wait the same time again until you can actually commutate. Almost at least. Because as your loosing time by setting pin values, reading serial input, etc. you have to substract a *Phasedelay* of your second time delay.
+The library controls two parameters, that depend on the current dutycycle: They are called *V_neutral Offset* and *Phasedelay*.
+As explained above, the program needs to detect, when it's the right moment to commutate. This is done by comparing the inducted BEMF voltage on the floating phase with a simulated neutral voltage, which should be exact the (scaled) half of your supply voltage. But as this is not precise enough, you have to subtract a value (exactly! I'm talking about *V_neutral Offset*). [Include Picture ...]
+
+Now you know, when half of the time to commutate has passed, however you have to wait the same time again until you can actually commutate. Almost at least. Because as you'r loosing time by setting pin values, reading serial input, etc. you have to substract a *Phasedelay* of your second time delay.
 
 Lets take a look at the following picture:
-<img src="" width="500">
+<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/explanation_parameters.jpg" width="900">
 These are the values I got by tuning the parameters by hand, so the drawn current is minimal but the RPM speed is maximal. I recognized, you can approach the graph, when you say: At the borders you have a constant part, and in the middle there's a linear slope. The approach looks quite good for the *V_neutral Offset*. Ok, maybe the *Phasedelay* graph looks a bit venturous, however it works. 
 Now, what you can do, is shift the brake of slope to suit your motor. I think the picture describes it the best.
 
 To give you an idea what current values are typical, here are mine (again for the Pichler Boost 15 BLDC motor):
-<img src="" width="500">
+<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/diagram_current.jpg" width="600">
 
 ### Tuning
 Ok, but how to find out your values? Therefore you have to change in the debug mode:
 Set your Dutycycle to 1:
-<img src="" width="500">
+<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/SetDutycycleToOne.JPG" width="300">
+
 Uncomment the following in the *src/IFX007T_Motor-Control.h*
-<img src="" width="500">
+<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/UncommentDegugMode.JPG" width="1000">
+
 Upload the sketch to your Arduino.
 Now you can set the *V_neutral Offset* and the *Phasedelay* just like the *Dutycycle* manually (you won't need to change the iterations, its always 3).
+
 Here (*src/IFX007T_Motor-Control.h*) you would find the initial values after startup:
-<img src="" width="500">
+<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/TuneStartValues.JPG" width="400">
 
 ### Keybord commands for tuning
 |            | **Speed** | **V_neutralOffset** | **Phasedelay** | **Iterations** |
