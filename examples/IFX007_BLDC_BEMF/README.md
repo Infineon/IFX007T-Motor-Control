@@ -16,18 +16,37 @@ In your first attempt, leave one hand on the main power switch of your BLDC shie
 It would be even better if you plug a multimeter between your power supply as well (10A fused), in order to monitor the current.
 
 If the motor starts turning slowly, then suddenly gets boosted and keeps turning with high speed: Congratulations!
+
 If it doesn't turn at all but makes a squeezing noise, switch off your power supply because you first have to change some values (explained below).
 
 ## Software
+
+### Functions
+#### .setBLDCDutyCyclespeed(direction, DutyCycle)
+Use this function only in a continous loop without any time-critical code next to it (just like in the example sketch).
+The paramter direction can be 0 or 1.
+The parameter DutyCycle can be 0 to 255 but it has a bonus feature:
+If you set it to 1, you can control the speed via the serial monitor, by entering 't' to increase speed or 'g' to reduce the speed.
+Values till 20 will be set to 0, as this duty cycle is too low, to keep the BLDC running.
+
+#### .configureBLDCMotor(MyMotor.MotorParam)
+This function transmits the srtuct element 'MotorParam' to configure the behavior of your BLDC. Use it just like in the example sketch.
+
+#### .DebugRoutine(Serialinput)
+This function interprets the serial input. You need it if you want to control the speed or change other parameters via keyboard input. See the table *Keyboard commands for tuning* below.
+
+### Troubleshooting
 If your motor starts turning slowly for about 3 seconds but then gets stuck, you'll need to read the following.
-The library controls two parameters, that depend on the current dutycycle: They are called *V_neutral Offset* and *Phasedelay*.
-As explained above, the program needs to detect, when it's the right moment to commutate. This is done by comparing the inducted BEMF voltage on the floating phase with a simulated neutral voltage, which should be exact the (scaled) half of your supply voltage. But as this is not precise enough, you have to subtract a value (exactly! I'm talking about *V_neutral Offset*). [Include Picture ...]
+The library controls two parameters, that depend on the current dutycycle: They are called *V_neutral offset* and *Phasedelay*.
+As explained above, the program needs to detect, when it's the right moment to commutate. This is done by comparing the inducted BEMF voltage on the floating phase with a simulated neutral voltage, which should be exact the (scaled) half of your supply voltage. But as this is not precise enough, you have to subtract a value (exactly! I'm talking about *V_neutral offset*). [Include Picture ...]
 
-Now you know, when half of the time to commutate has passed, however you have to wait the same time again until you can actually commutate. Almost at least. Because as you'r loosing time by setting pin values, reading serial input, etc. you have to substract a *Phasedelay* of your second time delay.
+Now you know, when half of the time to commutate has passed, however you have to wait the same time again until you can actually commutate. Almost at least. Because as you're loosing time by setting pin values, reading serial input, etc. you have to substract a *Phasedelay* of your second time delay.
+However these two parameters are not constant, they are dependant of the current dutycycle (= speed), so we have to implement a function.
 
-Lets take a look at the following picture:
+Lets take a look at the following charts:
 <img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/explanation_parameters.jpg" width="900">
-These are the values I got by tuning the parameters by hand, so the drawn current is minimal but the RPM speed is maximal. I recognized, you can approach the graph, when you say: At the borders you have a constant part, and in the middle there's a linear slope. The approach looks quite good for the *V_neutral Offset*. Ok, maybe the *Phasedelay* graph looks a bit venturous, however it works. 
+
+These are the values I got by tuning the parameters by hand. So every 10 dutycycle points I played araound with the values for *Phasedelay* and *V_neutral offset* (via the Serial monitor/Keyboard input), to get the minimum current but the maximum RPM speed. I recognized, you can approach the graph, when you say: At the borders you have a constant part, and in the middle there's a linear slope. The approach looks quite good for the *V_neutral offset*. Ok, maybe the *Phasedelay* graph looks a bit venturous, however it works. 
 Now, what you can do, is shift the brake of slope to suit your motor. I think the picture describes it the best.
 
 To give you an idea what current values are typical, here are mine (again for the Pichler Boost 15 BLDC motor):
@@ -54,17 +73,6 @@ Here (*src/IFX007T_Motor-Control.h*) you would find the initial values after sta
 |**Down**|g|f|d|s|
 
 Don't forget to comment out again the Debug mode after you finished playing around, otherwise your changes to the *MotorParam* won't take effect.
-
-### .setBLDCDutyCyclespeed(direction, DutyCycle)
-Use this function only in a continous loop without any time-critical code next to it (just like in the example sketch).
-The paramter direction can be 0 or 1.
-The parameter DutyCycle can be 0 to 255 but it has a bonus feature:
-If you set it to 1, you can control the speed via the serial monitor, by entering 't' to increase speed or 'g' to reduce the speed.
-Values till 20 will be set to 0, as this duty cycle is too low, to keep the BLDC running.
-
-### .configureBLDCMotor(MyMotor.MotorParam)
-This function transmits the srtuct element 'MotorParam' to configure the behavior of your BLDC. Use it just like in the example sketch.
-
 
 ## Default Pin Assignment
 
