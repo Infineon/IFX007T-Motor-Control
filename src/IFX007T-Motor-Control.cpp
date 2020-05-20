@@ -232,7 +232,7 @@ void IFX007TMotorControl::setBLDCDutyCyclespeed(bool direction, uint8_t dutycycl
   {
     TRIGGER_PIN;
     while(!StartupBLDC(direction));
-    DEBUG_PRINT_LN("Started up sensorless BLDC motor succesfully.");
+    DEBUG_PRINT_LN("Started up sensorless BLDC motor.");
     delayMicroseconds(12);
     TRIGGER_PIN;
   }
@@ -275,18 +275,23 @@ void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t dutycycle)
  * TODO: DIRECTION; DEBUGROUTINE; RPMSPEED
  */
 
-void IFX007TMotorControl::DoBEMFCommutation(bool dir)
+void IFX007TMotorControl::DoBEMFCommutation(bool direction)
 {
-    dir = dir*2;                      // direction can be 0 or 1
-    uint16_t BEMFvoltage = 0;
-    uint16_t timefromzero = 0;
- 
-    
+  uint8_t dir;
+  uint16_t timefromzero = 0;
 
+  if (direction == 0 || direction == 1)   // make sure that direction can only be 0 or 1
+  {
+    dir = direction*2;                      
+  }
+  else dir = direction = 0;           //default direction, when wrong input
+    
+ 
     #ifndef DEBUG_IFX007T
-      if((_lastBLDCspeed > 1) && (_lastBLDCspeed != _CurrentDutyCycle))   // Update only, when motor has accelerated and Dutycycle changed
+      if((_lastBLDCspeed > 1) && (_lastBLDCspeed != _CurrentDutyCycle))   // Update only, when motor has accelerated and dutycycle changed
       {
-        _V_NeutralOffset = (uint8_t) (_CurrentDutyCycle * MotorParam.V_neutralFunct[0] + MotorParam.V_neutralFunct[1]);    //Calculate the Offset voltage according to my measurements (its linear and proportional to Dutycycle)
+        //Calculate the Offset voltage according to my measurements (its linear and proportional to Dutycycle)
+        _V_NeutralOffset = (uint8_t) (_CurrentDutyCycle * MotorParam.V_neutralFunct[0] + MotorParam.V_neutralFunct[1]);
         if(_V_NeutralOffset > MotorParam.V_neutral[1]) _V_NeutralOffset = MotorParam.V_neutral[1];
         if(_V_NeutralOffset < MotorParam.V_neutral[3]) _V_NeutralOffset = MotorParam.V_neutral[3];
 
@@ -299,63 +304,37 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
 
     #endif
 
+    //Calculate the reference voltage and store in the global _V_neutral
     _V_neutral = (uint16_t) (analogRead(_PinAssignment[RefVoltage][0]) * (_CurrentDutyCycle/255.0)+0.5)-_V_NeutralOffset;
-
-    TRIGGER_PIN;                      // Toggle Debug Pin
 
     switch (_Commutation)
     {
     case 0:
-        for (uint8_t i=0; i< iterations; i++)
-        {
-          BEMFvoltage = analogRead(_PinAssignment[AdcPin][2-dir]);
-          if (BEMFvoltage > _V_neutral) i-=1;
-        }
-        _Commutation = 1;         
+        while(!DetectZeroCrossing(2, direction));   //wait till zerocrossing occured
+        _Commutation = 1+2*dir;     
         break;
     case 1:
-        for (uint8_t i=0; i< iterations; i++)
-        {
-          BEMFvoltage = analogRead(_PinAssignment[AdcPin][1]);
-          if (BEMFvoltage < _V_neutral) i-=1;
-        }
-        _Commutation=2;
+        while(!DetectZeroCrossing(1, 1-direction));
+        _Commutation=2-dir;
         break;
     case 2:
-    
-        for (uint8_t i=0; i< iterations; i++)
-        {
-          BEMFvoltage = analogRead(_PinAssignment[AdcPin][dir]);
-          if (BEMFvoltage > _V_neutral) i-=1;
-        }
-        _Commutation=3;      
+        while(!DetectZeroCrossing(0, direction));
+        _Commutation=3-dir;
+        TRIGGER_PIN; 
+
         break;
     case 3:
-    
-        for (uint8_t i=0; i< iterations; i++)
-        {
-          BEMFvoltage = analogRead(_PinAssignment[AdcPin][2-dir]);
-          if (BEMFvoltage < _V_neutral) i-=1;
-        }
-        _Commutation=4;
+        while(!DetectZeroCrossing(2, 1-direction));
+        _Commutation=4-dir;
         break;
-
     case 4:
-        for (uint8_t i=0; i< iterations; i++)
-        {
-          BEMFvoltage = analogRead(_PinAssignment[AdcPin][1]);
-          if (BEMFvoltage > _V_neutral) i-=1;
-        }
-        _Commutation=5;
+        while(!DetectZeroCrossing(1, direction));
+        _Commutation=5-dir;
         break;
-
     case 5:
-        for (uint8_t i=0; i< iterations; i++)
-        {
-          BEMFvoltage = analogRead(_PinAssignment[AdcPin][dir]);
-          if (BEMFvoltage < _V_neutral) i-=1;
-        }
-        _Commutation=0;
+        while(!DetectZeroCrossing(0, 1-direction));
+        _Commutation=0+2*dir;
+        TRIGGER_PIN;
         break;
     default:
     break;
@@ -364,13 +343,43 @@ void IFX007TMotorControl::DoBEMFCommutation(bool dir)
     timefromzero = micros()-timerstart-phasedelay; //Calculate the passed time, since the last commutation
 
     delayMicroseconds(timefromzero);               // Timing is very important. When zero crossing occured, only half of the time has passed.
-
-    UpdateHardware(_Commutation,dir);              // Commutate: Set the new pin configuration for the next step
-
-    TRIGGER_PIN;                                   // Toggle Debug Pin
+    
+    if(_Commutation == 3 || _Commutation == 0) TRIGGER_PIN;    // Toggle Debug Pin (only for debugging)
+    
+    UpdateHardware(_Commutation,0);              // Commutate: Set the new pin configuration for the next step
     timerstart= micros();                          // Store the time, when last commutation occured
+    if(_Commutation == 5 || _Commutation == 2) TRIGGER_PIN;
+    
     
 }
+
+/**
+ * Program function
+ * @param Pin ADC Pin that should be read and be compared to V_neutral
+ * @param sign 0 means BEMF voltage smaller than V_neutral, 1 means BEMF voltage bigger than V_neutral
+ */
+bool IFX007TMotorControl::DetectZeroCrossing(uint8_t Pin, bool sign)
+{
+  uint16_t BEMFvoltage = 0;
+  if (sign == 0)
+  {
+    for (uint8_t i=0; i< iterations; i++)
+    {
+      BEMFvoltage = analogRead(_PinAssignment[AdcPin][Pin]);
+      if (BEMFvoltage > _V_neutral) i-=1;
+    }
+  }
+  else
+  {
+    for (uint8_t i=0; i< iterations; i++)
+    {
+      BEMFvoltage = analogRead(_PinAssignment[AdcPin][Pin]);
+      if (BEMFvoltage < _V_neutral) i-=1;
+    }
+  }
+  return 1;
+}
+
 
 /**
  * User function
@@ -510,54 +519,54 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
     //CCW direction
     switch (CommutationStep) {
       case 0:
-        digitalWrite(_PinAssignment[InhibitPin][0], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+        digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
       case 1:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][1], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
         analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
       case 2:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][2], LOW);
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
+        digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
         analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], 0);
         break;
 
       case 3:
-        digitalWrite(_PinAssignment[InhibitPin][0], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+        digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
         break;
 
       case 4:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][1], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
+        digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
+        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], 0);
         analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
         break;
 
       case 5:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][2], LOW);
+        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
+        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
+        digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
         analogWrite(_PinAssignment[InputPin][0], 0);
         analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
         analogWrite(_PinAssignment[InputPin][2], 0);
