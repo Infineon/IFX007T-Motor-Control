@@ -38,9 +38,16 @@ This function interprets the serial input. You need it if you want to control th
 ### Troubleshooting
 If your motor starts turning slowly for about 3 seconds but then gets stuck, you'll need to read the following.
 The library controls two parameters, that depend on the current dutycycle: They are called *V_neutral offset* and *Phasedelay*.
-As explained above, the program needs to detect, when it's the right moment to commutate. This is done by comparing the inducted BEMF voltage on the floating phase with a simulated neutral voltage, which should be exact the (scaled) half of your supply voltage. But as this is not precise enough, you have to subtract a value (exactly! I'm talking about *V_neutral offset*). [Include Picture ...]
+As explained above, the program needs to detect, when it's the right moment to commutate. This is done by comparing the inducted BEMF voltage on the floating phase with a simulated neutral voltage, which should be exact the (scaled) half of your supply voltage. But as this is not precise enough, you have to subtract a value (exactly! I'm talking about *V_neutral offset*).
 
 Now you know, when half of the time to commutate has passed, however you have to wait the same time again until you can actually commutate. Almost at least. Because as you're loosing time by setting pin values, reading serial input, etc. you have to substract a *Phasedelay* of your second time delay.
+
+You can see it quite clear on these Oszi-screenshots:
+
+<img src="/pictures/Oszi_V_neutralOffset.JPG" width="600">
+
+<img src="/pictures/Oszi_Phasedelay.JPG" width="600">
+
 However these two parameters are not constant, they are dependant of the current dutycycle (= speed), so we have to implement a function.
 
 Lets take a look at the following charts:
