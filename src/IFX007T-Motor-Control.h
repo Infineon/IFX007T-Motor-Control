@@ -68,7 +68,7 @@ class IFX007TMotorControl
         void    changeBEMFspeed(bool direction, uint16_t dutycycle);
         void    DoBEMFCommutation(bool dir);
         bool    DetectZeroCrossing(uint8_t Pin, bool sign);
-        void    UpdateHardware(uint8_t CommutationStep, uint8_t Dir);       //For BLDC motor
+        void    UpdateHardware(uint8_t CommutationStep);       //For BLDC motor
         void    calculateLinearFunction(float *array, float *result);
         void    setPwmFrequency(uint8_t pin, uint16_t divisor);
         

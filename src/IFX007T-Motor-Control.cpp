@@ -191,10 +191,18 @@ bool IFX007TMotorControl::StartupBLDC(bool dir)
 
   while (i>600)
   {
-    _Commutation ++;
-    if (_Commutation==6) _Commutation=0;
+    if(dir == 0)
+    {
+      _Commutation ++;
+      if (_Commutation==6) _Commutation=0;
+    }
+    else
+    {
+      if (_Commutation==0) _Commutation=6;
+      _Commutation --;
+    }
     delayMicroseconds(i);
-    UpdateHardware(_Commutation,dir);
+    UpdateHardware(_Commutation);
     i=i-30;                     // Decrease the delay, maybe you have to play araound with this value
   }
 
@@ -343,10 +351,10 @@ void IFX007TMotorControl::DoBEMFCommutation(bool direction)
     timefromzero = micros()-timerstart-phasedelay; //Calculate the passed time, since the last commutation
 
     delayMicroseconds(timefromzero);               // Timing is very important. When zero crossing occured, only half of the time has passed.
-    
+
     if(_Commutation == 3 || _Commutation == 0) TRIGGER_PIN;    // Toggle Debug Pin (only for debugging)
     
-    UpdateHardware(_Commutation,0);              // Commutate: Set the new pin configuration for the next step
+    UpdateHardware(_Commutation);              // Commutate: Set the new pin configuration for the next step
     timerstart= micros();                          // Store the time, when last commutation occured
     if(_Commutation == 5 || _Commutation == 2) TRIGGER_PIN;
     
@@ -437,144 +445,71 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
       Serial.print("DC: ");
       Serial.println(_CurrentDutyCycle);
     }
-    /*
-    if ((Serialinput >= '0') && (Serialinput <= '255')){
-      _CurrentDutyCycle = Serialinput;
-      Serial.print("_CurrentDutyCycle: ");
-      Serial.println(_CurrentDutyCycle);
-    }
-    */
 }
 
 /**
  * Commutation table for brushless motors (the "6 step Process")
  * Inhibit Pin = High means active -> Inhibit Pin = Low means output is floating
 */
-void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep, uint8_t Dir)
+void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep)
 {
-  //CW direction
-  if (Dir == 0) {
+  switch (CommutationStep) {
+    case 0:
+      digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
+      digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
+      digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
+      analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
+      analogWrite(_PinAssignment[InputPin][1], 0);
+      analogWrite(_PinAssignment[InputPin][2], 0);
+      break;
 
-    switch (CommutationStep) {
-      case 0:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
-        digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
-        analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
-        analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], 0);
-        break;
+    case 1:
+      digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
+      digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
+      digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
+      analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
+      analogWrite(_PinAssignment[InputPin][1], 0);
+      analogWrite(_PinAssignment[InputPin][2], 0);
+      break;
 
-      case 1:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
-        digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
-        analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
-        analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], 0);
-        break;
+    case 2:
+      digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
+      digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
+      digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
+      analogWrite(_PinAssignment[InputPin][0], 0);
+      analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
+      analogWrite(_PinAssignment[InputPin][2], 0);
+      break;
 
-      case 2:
-        digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
-        analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
-        analogWrite(_PinAssignment[InputPin][2], 0);
-        break;
+    case 3:
+      digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
+      digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
+      digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
+      analogWrite(_PinAssignment[InputPin][0], 0);
+      analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
+      analogWrite(_PinAssignment[InputPin][2], 0);
+      break;
 
-      case 3:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
-        digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
-        analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
-        analogWrite(_PinAssignment[InputPin][2], 0);
-        break;
+    case 4:
+      digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
+      digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
+      digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
+      analogWrite(_PinAssignment[InputPin][0], 0);
+      analogWrite(_PinAssignment[InputPin][1], 0);
+      analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
+      break;
 
-      case 4:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
-        digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
-        analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
-        break;
+    case 5:
+      digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
+      digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
+      digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
+      analogWrite(_PinAssignment[InputPin][0], 0);
+      analogWrite(_PinAssignment[InputPin][1], 0);
+      analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
+      break;
 
-      case 5:
-        digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
-        analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
-        break;
-
-      default:
-        break;
-    }
-
-  }
-  else {
-    //CCW direction
-    switch (CommutationStep) {
-      case 0:
-        digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
-        analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
-        analogWrite(_PinAssignment[InputPin][2], 0);
-        break;
-
-      case 1:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
-        digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
-        analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
-        analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], 0);
-        break;
-
-      case 2:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
-        digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
-        analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
-        analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], 0);
-        break;
-
-      case 3:
-        digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
-        analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
-        break;
-
-      case 4:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
-        digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
-        digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
-        analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], 0);
-        analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
-        break;
-
-      case 5:
-        digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
-        digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
-        digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
-        analogWrite(_PinAssignment[InputPin][0], 0);
-        analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
-        analogWrite(_PinAssignment[InputPin][2], 0);
-        break;
-
-      default:
-        break;
-    }
+    default:
+      break;
   }
 }
 
