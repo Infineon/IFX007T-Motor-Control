@@ -34,6 +34,22 @@ typedef struct
         float PhasedelayFunct[2];       //Slope, offset
     }BLDCParameter;
 
+typedef struct
+    {
+        uint8_t in_U;
+        uint8_t in_V;
+        uint8_t in_W;
+        uint8_t inh_U;
+        uint8_t inh_V;
+        uint8_t inh_W;
+        uint8_t BEMF_U;
+        uint8_t BEMF_V;
+        uint8_t BEMF_W;
+        uint8_t adc_Vneutral;
+        uint8_t adc_IS;
+        uint8_t adc_ISRC;
+    }BLDCPinSetting;
+
 //================ Class Definition ===============================================================================
 class IFX007TMotorControl
 {
@@ -44,7 +60,7 @@ class IFX007TMotorControl
     //------------- User Functions --------------------------------------------------------------------------------
 
                 IFX007TMotorControl(void);
-                IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t ADdcU, uint8_t ADdcV, uint8_t AdcW);
+                IFX007TMotorControl(BLDCPinSetting MotorPins);
                 ~IFX007TMotorControl(void);
         void    begin(void);
         void    end(void);
@@ -52,12 +68,13 @@ class IFX007TMotorControl
         void    setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle);          //For Unidirectional motors; Parameters: motor can be 0, 1 or 2, dutycycle can be 0 - 255
         void    setBiDirMotorSpeed(bool direction, uint8_t dutycycle);          //For Bidirectional motors; Parametrs: direction can be 0 or 1, dutycycle can be 0 - 255
         void    configureBLDCMotor(BLDCParameter MyParameters);  
-        void    setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed);
+        void    setBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed);
         void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);                         
         void    DebugRoutine(uint8_t Serialinput);
         
     //------------- Variables ----------------------------------------------------
         BLDCParameter MotorParam;
+        BLDCPinSetting MotorPins;
 
         
         
@@ -93,7 +110,9 @@ class IFX007TMotorControl
         uint8_t _TargetDutyCycle;
         bool _debugPin;
         uint16_t _Stepcounter = 0;
-        uint32_t timerstart;
+        uint32_t timerstart = micros();
+        uint32_t _TimeperRotation;
+        int16_t _RPM_Integral;
 
         // Values to start with, if debug option is turned on
         uint8_t iterations = 3;

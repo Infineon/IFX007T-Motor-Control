@@ -33,17 +33,20 @@ IFX007TMotorControl::IFX007TMotorControl(void)
  * Constructor 2
  * This Constructor is called, if arguments are given to it.
  */
-IFX007TMotorControl::IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t AdcU, uint8_t AdcV, uint8_t AdcW)
+IFX007TMotorControl::IFX007TMotorControl(BLDCPinSetting MotorPins)
 {
-    _PinAssignment[InputPin][0] = INU;
-    _PinAssignment[InputPin][1] = INV;
-    _PinAssignment[InputPin][2] =INW;
-    _PinAssignment[InhibitPin][0] = INHU;
-    _PinAssignment[InhibitPin][1] = INHV;
-    _PinAssignment[InhibitPin][2] = INHW;
-    _PinAssignment[AdcPin][0] = AdcU;
-    _PinAssignment[AdcPin][1] = AdcV;
-    _PinAssignment[AdcPin][2] = AdcW;
+    _PinAssignment[InputPin][0] = MotorPins.in_U;
+    _PinAssignment[InputPin][1] = MotorPins.in_V;
+    _PinAssignment[InputPin][2] = MotorPins.in_W;
+    _PinAssignment[InhibitPin][0] = MotorPins.inh_U;
+    _PinAssignment[InhibitPin][1] = MotorPins.inh_V;
+    _PinAssignment[InhibitPin][2] = MotorPins.inh_W;
+    _PinAssignment[AdcPin][0] = MotorPins.BEMF_U;
+    _PinAssignment[AdcPin][1] = MotorPins.BEMF_V;
+    _PinAssignment[AdcPin][2] = MotorPins.BEMF_W;
+    _PinAssignment[RefVoltage][0] = MotorPins.adc_Vneutral;
+    _PinAssignment[RefVoltage][1] = MotorPins.adc_IS;
+    _PinAssignment[RefVoltage][2] = MotorPins.adc_ISRC;
 }
 
 /**
@@ -137,7 +140,6 @@ void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle)
  * MotorPoles: amount of teeth (should be a multiple of 3)
  * NrMagnets: Numer of Magnets (should be a multiple of 2)
  * Hallsensor: 0 means BEMF-Mode, 1 means Hallsensor-mode
- * torque: the dutycycle, the motor is driven with (a value between 0 and 255)
  * 
  * Refer to: https://www.allaboutcircuits.com/industry-articles/3-phase-brushless-dc-motor-control-with-hall-sensors/
  *           https://www.mikrocontroller.net/articles/Brushless-Controller_für_Modellbaumotoren
@@ -165,10 +167,12 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
         calculateLinearFunction(MyParameters.Phasedelay,  MotorParam.PhasedelayFunct);
     }
     //_NumberofSteps = (MotorPoles * NrMagnets) / gcd(MotorPoles, NrMagnets);
+    _NumberofSteps = ((MyParameters.MotorPoles /2 +1) * 6);    //experimaental, need exact formula
 }
 
 
 /**
+ * Program function
  * Calculates the slope and offset out of two given points
  */
 void IFX007TMotorControl::calculateLinearFunction(float *array, float *result)
@@ -186,10 +190,11 @@ void IFX007TMotorControl::calculateLinearFunction(float *array, float *result)
  */
 bool IFX007TMotorControl::StartupBLDC(bool dir)
 {
-  _CurrentDutyCycle = 180;     //Initial Speed for Startup
+  _CurrentDutyCycle = 150;     //Initial Speed for Startup
   uint16_t i = 7000;           //Delay to start with
 
-  while (i>600)
+
+  while (i>1000)
   {
     if(dir == 0)
     {
@@ -206,23 +211,76 @@ bool IFX007TMotorControl::StartupBLDC(bool dir)
     i=i-30;                     // Decrease the delay, maybe you have to play araound with this value
   }
 
+
+/*
+  for(uint8_t i = 0; i < 42; i++)
+  {
+    _Commutation ++;
+    if (_Commutation==6) _Commutation=0;
+
+    delay(500); 
+    UpdateHardware(_Commutation);
+  }
+  while(1);
+*/
+
   _lastBLDCspeed = 1;
   return 1;
 }
 
 /**
  * User function
- * TODO: User Function to set a new direction and RPMspeed
+ * @param direction can be 0 or 1 (forward or backward)
+ * @param desired_rpmSpeed can be a value between 0 and Vcc*KV (the KV mentioned on your motor)
  */
-void IFX007TMotorControl::setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed)
+void IFX007TMotorControl::setBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed)
 {
-  if(_lastBLDCspeed != rpmSpeed)
+  float dutycycleF;
+  uint16_t dutycycle;
+
+  if(_lastBLDCspeed == 0)
   {
-    if(_lastBLDCspeed == 0)
-    {
-      while(!StartupBLDC(direction));
-    }
+    while(!StartupBLDC(direction));
+    DEBUG_PRINT_LN("Started up sensorless BLDC motor.");
   }
+
+  else if(_lastBLDCspeed > 1)                             //make sure, the motor has accelerated after startup
+  {
+    _lastBLDCspeed = _CurrentDutyCycle;
+
+    if(_Stepcounter > (_NumberofSteps - 1))
+    {
+      _TimeperRotation = micros() - _TimeperRotation;     //Calculate the passed time for one rotation
+      uint16_t actual_rpmSpeed = 60000000 / _TimeperRotation;
+      int16_t error = desired_rpmSpeed - actual_rpmSpeed;
+    
+      _RPM_Integral = _RPM_Integral + error;
+
+      if(_RPM_Integral < -10000) _RPM_Integral = -10000;
+      else if(_RPM_Integral > 10000) _RPM_Integral = 10000;
+
+      //if(error > 99)
+      //{
+        dutycycleF = _CurrentDutyCycle + 0.003 * error + 0.0001 * _RPM_Integral; // Calculate the new dutycycle according to the PI
+        /*
+      }
+      else
+      {
+        dutycycleF = _CurrentDutyCycle + 0.01 * error + 0.001 * _RPM_Integral; // Calculate the new dutycycle according to the PI
+      }
+      */
+
+      dutycycle = (uint16_t) (dutycycleF);
+      if( !(dutycycle > 20 && dutycycle < 255)) dutycycle = _lastBLDCspeed;    // Limit the dutycycle
+
+      _Stepcounter = 0;
+      _TimeperRotation = micros();      //Store the actual time
+      //Serial.println(dutycycle);
+    }
+    else _Stepcounter ++;
+  }
+
+  changeBEMFspeed(direction, dutycycle);
 }
 
 /**
@@ -241,7 +299,6 @@ void IFX007TMotorControl::setBLDCDutyCyclespeed(bool direction, uint8_t dutycycl
     TRIGGER_PIN;
     while(!StartupBLDC(direction));
     DEBUG_PRINT_LN("Started up sensorless BLDC motor.");
-    delayMicroseconds(12);
     TRIGGER_PIN;
   }
   
@@ -260,7 +317,24 @@ void IFX007TMotorControl::setBLDCDutyCyclespeed(bool direction, uint8_t dutycycl
 void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t dutycycle)
 {
   DoBEMFCommutation(direction);
-  if((_Stepcounter) > 1000)
+  if (_lastBLDCspeed > 1 )
+  {
+    if(dutycycle != 1) _CurrentDutyCycle = dutycycle;           // dutycycle = 1 means keyboard controlled dutycycle
+    if(dutycycle > 1 && dutycycle < 20) _CurrentDutyCycle = 0;  // Values < 20 make no sense, as its to less to keep the motor runnning
+  }
+
+  else
+  {
+    if((_Stepcounter) > 1000)
+    {
+      _lastBLDCspeed = 2;
+      _CurrentDutyCycle = 100;
+    }
+    else _Stepcounter++;
+  }
+
+  /*
+  if((_Stepcounter) > 500)
   {
     if(_lastBLDCspeed < 2){
       _lastBLDCspeed = 2;
@@ -270,6 +344,7 @@ void IFX007TMotorControl::changeBEMFspeed(bool direction, uint16_t dutycycle)
     if(dutycycle > 1 && dutycycle < 20) _CurrentDutyCycle = 0;  // Values < 20 make no sense, as its to less to keep the motor runnning
   }
   else _Stepcounter++;
+  */
 }
 
 /**
