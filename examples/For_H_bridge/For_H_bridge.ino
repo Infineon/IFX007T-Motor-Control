@@ -1,16 +1,5 @@
 /**
  * This code is for h bridge configuration. The motor should be connected to output U and output V.
- * 
- * Default Pin configuration:
-// Inhabit pins
-int INHU = 6;
-int INHV = 5;
-int INHW = 3;
-
-//Input pins
-int INU = 11;
-int INV = 10;
-int INW = 9;
 */
 #include "IFX007T-Motor-Control.h"
 

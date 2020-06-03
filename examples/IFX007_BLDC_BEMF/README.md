@@ -12,6 +12,8 @@ Connect the three wires of your brushless motor to the 'U V W' outputs of the bo
 Connect a voltage supply **with current limitation to 8A**, suited to the motor you want to control (typically 12V or 24V).
 **Do not use a supply voltage higher than 24V, as this might damage your microcontroller board!**
 
+<img src="/pictures/Schematics_BLDC.JPG" width="600">
+
 In your first attempt, leave one hand on the main power switch of your BLDC shield in case of malfunction and give it a try.
 It would be even better if you plug a multimeter between your power supply as well (10A fused), in order to monitor the current.
 
