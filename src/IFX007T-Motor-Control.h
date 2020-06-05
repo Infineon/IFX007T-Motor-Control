@@ -90,7 +90,6 @@ class IFX007TMotorControl
         void    setPwmFrequency(uint8_t pin, uint16_t divisor);
         
         void    setADCspeedFast(void);
-        uint8_t gcd(uint8_t a, uint8_t b);
 
         /*  _________________________
             | INU   | INV   | INW   |
@@ -107,12 +106,10 @@ class IFX007TMotorControl
         uint8_t _Commutation;
         uint16_t _lastBLDCspeed;
         uint8_t _CurrentDutyCycle;
-        uint8_t _TargetDutyCycle;
         bool _debugPin;
         uint16_t _Stepcounter = 0;
         uint32_t timerstart = micros();
         uint32_t _TimeperRotation;
-        int16_t _RPM_Integral;
 
         // Values to start with, if debug option is turned on
         uint8_t iterations = 3;
