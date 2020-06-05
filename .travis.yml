@@ -6,7 +6,8 @@ python:
 sudo: required
 
 branches:
-    - ardlib_rev
+    - master
+    - ardlib
     - /^v.*$/
 
 # Builds Test
