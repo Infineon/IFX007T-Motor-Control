@@ -20,6 +20,7 @@ void setup()
 void loop()
 {
   Serial.println("Accelerate forwards");
+  direction = 0;
   for(speed = 0; speed < 255; speed ++)
   {
     // First Argument: Choose which direction the Motor should turn: 0 or 1
@@ -33,7 +34,9 @@ void loop()
     MyMotor.setBiDirMotorSpeed(direction, speed);
     delay(50);
   }
+
   Serial.println("Accelerate backwards");
+  direction = 1;
   for(speed = 0; speed < 255; speed ++)
   {
     MyMotor.setBiDirMotorSpeed(direction, speed);

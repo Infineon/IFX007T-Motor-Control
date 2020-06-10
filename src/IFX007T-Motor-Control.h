@@ -108,7 +108,7 @@ class IFX007TMotorControl
         uint8_t _CurrentDutyCycle;
         bool _debugPin;
         uint16_t _Stepcounter = 0;
-        uint32_t timerstart = micros();
+        uint32_t timerstart;
         uint32_t _TimeperRotation;
 
         // Values to start with, if debug option is turned on

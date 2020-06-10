@@ -181,6 +181,8 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
         calculateLinearFunction(MyParameters.Phasedelay,  MotorParam.PhasedelayFunct);
     }
     _NumberofSteps = ((MyParameters.MotorPoles /2 +1) * 6);    //experimaental, need exact formula
+
+    DEBUG_PRINT_LN("Debug mode is active.");
 }
 
 
@@ -206,7 +208,6 @@ bool IFX007TMotorControl::StartupBLDC(bool dir)
 {
   _CurrentDutyCycle = 150;     //Initial Speed for Startup
   uint16_t i = 7000;           //Delay to start with
-
 
   while (i>1000)
   {
@@ -287,10 +288,11 @@ void IFX007TMotorControl::setBLDCDutyCyclespeed(bool direction, uint8_t dutycycl
   
   if(_lastBLDCspeed == 0)
   {
-    TRIGGER_PIN;
+
     while(!StartupBLDC(direction));
     DEBUG_PRINT_LN("Started up sensorless BLDC motor.");
-    TRIGGER_PIN;
+
+    timerstart = micros();
   }
   
   //_CurrentDutyCycle = _TargetDutyCycle = dutycycle;
@@ -378,8 +380,6 @@ void IFX007TMotorControl::DoBEMFCommutation(bool direction)
     case 2:
         while(!DetectZeroCrossing(0, direction));
         _Commutation=3-dir;
-        TRIGGER_PIN; 
-
         break;
     case 3:
         while(!DetectZeroCrossing(2, 1-direction));
@@ -392,7 +392,6 @@ void IFX007TMotorControl::DoBEMFCommutation(bool direction)
     case 5:
         while(!DetectZeroCrossing(0, 1-direction));
         _Commutation=0+2*dir;
-        TRIGGER_PIN;
         break;
     default:
     break;
@@ -402,11 +401,11 @@ void IFX007TMotorControl::DoBEMFCommutation(bool direction)
 
     delayMicroseconds(timefromzero);               // Timing is very important. When zero crossing occured, only half of the time has passed.
 
-    if(_Commutation == 3 || _Commutation == 0) TRIGGER_PIN;    // Toggle Debug Pin (only for debugging)
+    //if(_Commutation == 3 || _Commutation == 0) TRIGGER_PIN;    // Toggle Debug Pin (only for debugging)
     
     UpdateHardware(_Commutation);              // Commutate: Set the new pin configuration for the next step
     timerstart= micros();                          // Store the time, when last commutation occured
-    if(_Commutation == 5 || _Commutation == 2) TRIGGER_PIN;
+    //if(_Commutation == 5 || _Commutation == 2) TRIGGER_PIN;
     
     
 }
@@ -418,6 +417,8 @@ void IFX007TMotorControl::DoBEMFCommutation(bool direction)
  */
 bool IFX007TMotorControl::DetectZeroCrossing(uint8_t Pin, bool sign)
 {
+  TRIGGER_PIN;
+
   uint16_t BEMFvoltage = 0;
   if (sign == 0)
   {
@@ -435,6 +436,8 @@ bool IFX007TMotorControl::DetectZeroCrossing(uint8_t Pin, bool sign)
       if (BEMFvoltage < _V_neutral) i-=1;
     }
   }
+  TRIGGER_PIN;
+
   return 1;
 }
 
@@ -563,6 +566,9 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep)
   }
 }
 
+
+#ifdef ARDUINO_AVR_UNO                                                  /** For Arduino Boards */
+
 /**
  * TODO: Include function from an external library, as its only usefull for Arduino Platform and not for XMC.
    Divides a given PWM pin frequency by a divisor.
@@ -646,3 +652,19 @@ void IFX007TMotorControl::setADCspeedFast(void)
     cbi(ADCSRA,ADPS1) ;
     cbi(ADCSRA,ADPS0) ;
 }
+
+
+
+#elif ((XMC1100_Boot_Kit)  || (XMC4700_Relax_Kit))                /** For XMC boards*/ 
+
+void IFX007TMotorControl::setPwmFrequency(uint8_t pin, uint16_t divisor)
+{
+  setAnalogWriteFrequency(pin, 15000);       // 31250 Hz, obviously we nee the half (fault in XMCforArduino?)
+}
+
+void IFX007TMotorControl::setADCspeedFast(void)
+{
+
+}
+
+#endif
