@@ -4,7 +4,7 @@
 
 #include <Arduino.h>
 
-//======= Very Important ========
+//======= Very important ========
 //#define DEBUG_IFX007T         //Uncomment, if you wish debug output or tune the motor (Disables automatic V_neutralOffset)
 //===============================
 
@@ -24,28 +24,59 @@
 #define AdcPin 2
 #define RefVoltage 3
 
+typedef struct
+    {
+        uint8_t MotorPoles;
+        bool SensingMode;
+        float V_neutral[4];
+        float V_neutralFunct[2];        //Slope, offset
+        float Phasedelay[4];
+        float PhasedelayFunct[2];       //Slope, offset
+    }BLDCParameter;
+
+typedef struct
+    {
+        uint8_t in_U;
+        uint8_t in_V;
+        uint8_t in_W;
+        uint8_t inh_U;
+        uint8_t inh_V;
+        uint8_t inh_W;
+        uint8_t BEMF_U;
+        uint8_t BEMF_V;
+        uint8_t BEMF_W;
+        uint8_t adc_Vneutral;
+        uint8_t adc_IS;
+        uint8_t adc_ISRC;
+    }BLDCPinSetting;
+
 //================ Class Definition ===============================================================================
 class IFX007TMotorControl
 {
     public:
 
+    
+
     //------------- User Functions --------------------------------------------------------------------------------
 
                 IFX007TMotorControl(void);
-                IFX007TMotorControl(uint8_t INHU, uint8_t INHV, uint8_t INHW, uint8_t INU, uint8_t INV, uint8_t INW, uint8_t ADdcU, uint8_t ADdcV, uint8_t AdcW); // Maybe I would create a structure somewhere and pass this structure as argument instead of all this variables. That would more user friendly in my opinion
+                IFX007TMotorControl(BLDCPinSetting MotorPins);
                 ~IFX007TMotorControl(void);
         void    begin(void);
         void    end(void);
 
         void    setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle);          //For Unidirectional motors; Parameters: motor can be 0, 1 or 2, dutycycle can be 0 - 255
         void    setBiDirMotorSpeed(bool direction, uint8_t dutycycle);          //For Bidirectional motors; Parametrs: direction can be 0 or 1, dutycycle can be 0 - 255
-        void    configureBLDCMotor(uint8_t MotorPoles, uint8_t NrMagnets, bool Hallsensor);  
-        void    setBLDCmotorRPMspeed(bool direction, uint16_t rpmSpeed);
+        void    configureBLDCMotor(BLDCParameter MyParameters);  
+        void    setBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed);
         void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);                         
         void    DebugRoutine(uint8_t Serialinput);
+        
+    //------------- Variables ----------------------------------------------------
+        BLDCParameter MotorParam;
+        BLDCPinSetting MotorPins;
 
-    //------------- Help functions called by the program itself ----------------------------------------------------
-        void    setPwmFrequency(uint8_t pin, uint16_t divisor);
+        
         
         
 
@@ -53,10 +84,12 @@ class IFX007TMotorControl
         bool    StartupBLDC(bool dir);                  // Algorithm to start up the motor, as long as theres no BEMF
         void    changeBEMFspeed(bool direction, uint16_t dutycycle);
         void    DoBEMFCommutation(bool dir);
-        void    UpdateHardware(uint8_t CommutationStep, uint8_t Dir);       //For BLDC motor
+        bool    DetectZeroCrossing(uint8_t Pin, bool sign);
+        void    UpdateHardware(uint8_t CommutationStep);       //For BLDC motor
+        void    calculateLinearFunction(float *array, float *result);
+        void    setPwmFrequency(uint8_t pin, uint16_t divisor);
         
         void    setADCspeedFast(void);
-        uint8_t gcd(uint8_t a, uint8_t b);
 
         /*  _________________________
             | INU   | INV   | INW   |
@@ -68,18 +101,19 @@ class IFX007TMotorControl
         uint8_t _PinAssignment[4][3];
 
 
-        uint32_t _V_neutral;
+        uint16_t _V_neutral;
         uint8_t _NumberofSteps;
         uint8_t _Commutation;
         uint16_t _lastBLDCspeed;
         uint8_t _CurrentDutyCycle;
-        uint8_t _TargetDutyCycle;
         bool _debugPin;
         uint16_t _Stepcounter = 0;
+        uint32_t timerstart;
+        uint32_t _TimeperRotation;
 
         // Values to start with, if debug option is turned on
         uint8_t iterations = 3;
-        int16_t phasedelay = 0;
+        int16_t phasedelay = 90;
         uint8_t _V_NeutralOffset  = 100;
 
 };
