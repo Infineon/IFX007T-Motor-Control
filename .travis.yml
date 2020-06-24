@@ -6,14 +6,14 @@ python:
 sudo: required
 
 branches:
-    - ardlib_rev
+    - master
+    - develop
     - /^v.*$/
 
 # Builds Test
 
 env: 
     matrix:
-      - PLATFORMIO_CI_SRC=examples/BLDC_HALL
       - PLATFORMIO_CI_SRC=examples/For_H_bridge
       - PLATFORMIO_CI_SRC=examples/For_half_bridge
       - PLATFORMIO_CI_SRC=examples/IFX007_BLDC_BEMF
@@ -24,4 +24,4 @@ install:
   - platformio platform install -f atmelavr@2.0.0
 
 script: 
-  - platformio ci --lib="." --board=uno #--board=xmc1100_boot_kit --board=xmc4700_relax_kit 
+  - platformio ci --lib="." --board=uno --board=xmc1100_boot_kit --board=xmc4700_relax_kit 
