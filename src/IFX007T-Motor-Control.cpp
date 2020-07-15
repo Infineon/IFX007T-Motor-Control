@@ -20,12 +20,12 @@ IFX007TMotorControl::IFX007TMotorControl(void)
     _PinAssignment[InhibitPin][0] = 6;
     _PinAssignment[InhibitPin][1] = 5;
     _PinAssignment[InhibitPin][2] = 3;
-    _PinAssignment[AdcPin][0] = 17;
-    _PinAssignment[AdcPin][1] = 16;
-    _PinAssignment[AdcPin][2] = 15;
-    _PinAssignment[RefVoltage][0] = 14;
-    _PinAssignment[RefVoltage][1] = 18;
-    _PinAssignment[RefVoltage][2] = 19;
+    _PinAssignment[AdcPin][0] = A3;
+    _PinAssignment[AdcPin][1] = A2;
+    _PinAssignment[AdcPin][2] = A1;
+    _PinAssignment[RefVoltage][0] = A0;
+    _PinAssignment[RefVoltage][1] = A4;
+    _PinAssignment[RefVoltage][2] = A5;
 
 }
 
@@ -85,8 +85,7 @@ void IFX007TMotorControl::begin(void)
     setPwmFrequency(_PinAssignment[InputPin][1], 1);
     setPwmFrequency(_PinAssignment[InputPin][2], 1);
 
-    // Set ADC sampling time faster in order to be fast enough to detect commutation pulse:
-    setADCspeedFast();
+    DEBUG_PRINT_LN("Debug mode is active.");
 }
 
 void IFX007TMotorControl::end(void)
@@ -165,24 +164,25 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
     _debugPin = 1;
     
 
-    if(MyParameters.SensingMode)    //Hall-sensor mode (Not supported yet)
+    if(MyParameters.SensingMode)    //Hall-sensor mode
     {
         #define HALLmode
         pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
     }
-    else             //BEMF mode
+    else                           //BEMF mode
     {
         #define BEMFmode
         _V_neutral = analogRead(_PinAssignment[RefVoltage][0]);    //Dummy measurement
         MotorParam = MyParameters;                                 //Store the parameters in a global variable
         calculateLinearFunction(MyParameters.V_neutral, MotorParam.V_neutralFunct);
         calculateLinearFunction(MyParameters.Phasedelay,  MotorParam.PhasedelayFunct);
+        
+        // Set ADC sampling time faster in order to be fast enough to detect commutation pulse:
+        setADCspeedFast();
     }
     _NumberofSteps = ((MyParameters.MotorPoles /2 +1) * 6);    //experimaental, need exact formula
-
-    DEBUG_PRINT_LN("Debug mode is active.");
 }
 
 
@@ -498,6 +498,87 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
       Serial.print("DC: ");
       Serial.println(_CurrentDutyCycle);
     }
+}
+
+
+/**
+ * User function
+ * Set the RPM speed and direction for Hall sensor BLDC
+*/
+void IFX007TMotorControl::setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed)
+{
+  if (_ClosedLoop==0) {
+    
+    delayMicroseconds(_OpenLoopDelay);
+    CommutateHallBLDC(direction);
+    UpdateHall();
+    
+  }
+  else {
+    CommutateHallBLDC(direction);
+    while(_oldHall == UpdateHall());
+    _HallCounts++;
+  }
+
+  PI_Regulator_DoWork(desired_rpmSpeed);
+}
+
+
+/**
+ * For Hall sensor BLDC
+*/
+void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed) {
+  //Do every 10 ms and in the open loop used  to accelerate and in the closed loop used to eliminate the error
+  if (millis() > _PI_Update_Timeout) {
+    uint16_t RPM = (_HallCounts * 100 * 60)/ MotorParam.MotorPoles;
+    _LastRPM = RPM;
+    float RPMf = (float) RPM;
+    float Error = desired_rpmSpeed - RPMf;
+    _PI_Integral = _PI_Integral + Error;
+    float pwm = PI_REG_K*Error + PI_REG_I * _PI_Integral;
+    //Limit PWM
+    if (pwm > 200) pwm = 200;
+    if (pwm < 30) pwm = 30;
+    _CurrentDutyCycle = (uint8_t) pwm;    
+    _HallCounts = 0;
+    _PI_Update_Timeout = millis() + 10;
+  }
+}
+
+/**
+ * For Hall sensor BLDC
+*/
+void IFX007TMotorControl::CommutateHallBLDC(bool direction) {
+
+  UpdateHardware(_Commutation);
+  if(direction == 0)
+  {
+    _Commutation ++;
+    if (_Commutation==6) _Commutation=0;
+  }
+  else
+  {
+    if (_Commutation==0) _Commutation=6;
+    _Commutation --;
+  }
+}
+
+
+/**
+ * To get the new position information of the motor and compared to the older one.
+ * every 10 ms
+ */
+uint8_t IFX007TMotorControl::UpdateHall() {
+  _oldHall = _latestHall;
+  _latestHall = (digitalRead(A3)<<2) | (digitalRead(A2)<<1) | digitalRead(A1);
+  if (_OpenLoopSteps > 0) {
+    if (_oldHall != _latestHall) _OpenLoopSteps--;    
+    _PI_Update_Timeout = millis()+10;
+  }
+  else {
+    _ClosedLoop = 1;
+  }
+  return _latestHall;
 }
 
 /**

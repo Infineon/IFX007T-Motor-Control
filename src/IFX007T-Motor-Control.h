@@ -24,6 +24,9 @@
 #define AdcPin 2
 #define RefVoltage 3
 
+#define PI_REG_K 0.01
+#define PI_REG_I 0.001
+
 typedef struct
     {
         uint8_t MotorPoles;
@@ -69,7 +72,8 @@ class IFX007TMotorControl
         void    setBiDirMotorSpeed(bool direction, uint8_t dutycycle);          //For Bidirectional motors; Parametrs: direction can be 0 or 1, dutycycle can be 0 - 255
         void    configureBLDCMotor(BLDCParameter MyParameters);  
         void    setBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed);
-        void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);                         
+        void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);
+        void    setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed);                         
         void    DebugRoutine(uint8_t Serialinput);
         
     //------------- Variables ----------------------------------------------------
@@ -88,6 +92,9 @@ class IFX007TMotorControl
         void    UpdateHardware(uint8_t CommutationStep);       //For BLDC motor
         void    calculateLinearFunction(float *array, float *result);
         void    setPwmFrequency(uint8_t pin, uint16_t divisor);
+        void    PI_Regulator_DoWork(uint16_t desired_rpmSpeed);
+        void    CommutateHallBLDC(bool direction);
+        uint8_t UpdateHall(void);
         
         void    setADCspeedFast(void);
 
@@ -110,6 +117,16 @@ class IFX007TMotorControl
         uint16_t _Stepcounter = 0;
         uint32_t timerstart;
         uint32_t _TimeperRotation;
+
+        uint8_t _ClosedLoop = 0;
+        uint8_t _OpenLoopSteps = 100;
+        uint16_t _OpenLoopDelay = 3000;
+        uint8_t _DutyCycle = 80; // it's related to the rotate speed (round per min)
+        uint8_t _oldHall, _latestHall = 0;
+        uint16_t _HallCounts = 0;
+        unsigned long _PI_Update_Timeout = 999999999;
+        uint16_t _LastRPM = 0; //the current rotate speed
+        float _PI_Integral = 0.0; 
 
         // Values to start with, if debug option is turned on
         uint8_t iterations = 3;
