@@ -1,12 +1,14 @@
 # Setup for Brushlessmotor with Hallsensor
 
-Status: not tested
-Pictures follow.
+**Status**: not tested
 
 ## Hardware
-When you have a new, unopened IFX007T board, you may first change some resistors, as the board is suited for BEMF mode only when delivered. So please have a look in the [Board manual](https://www.infineon.com/dgdl/Infineon-Motor_Control_Shield_with_IFX007T_for_Arduino-UserManual-v02_00-EN.pdf?fileId=5546d462694c98b401696d2026783556) on page 8 and solder the required resistors.
+When you have a new, unopened IFX007T board, you may first change some resistors, as the board is suited for BEMF (sensorless) mode only when delivered. So please have a look in the [Board manual](https://www.infineon.com/dgdl/Infineon-Motor_Control_Shield_with_IFX007T_for_Arduino-UserManual-v02_00-EN.pdf?fileId=5546d462694c98b401696d2026783556) on page 8 and solder up the required resistors.
 
-Connect the three wires of your brushless motor to the 'U V W' outputs of the board. 
+<img src="/pictures/Schematics_BLDC_hall.JPG" width="600">
+
+Connect the three phase wires of your brushless motor to the 'U V W' outputs of the board. Connect the 5 wires of your hall encoder to the green terminal. Refer to the datasheet of your BLDC to find out the correct order and colors of your wires.
+**Do not use a supply voltage higher than 24V, as this might damage your microcontroller board!**
 
 ## Software
 
