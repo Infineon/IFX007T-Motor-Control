@@ -1,4 +1,4 @@
-# Half Bridge setup
+# H-Bridge setup
 
 ## Hardware
 This example shows, how you can turn a motor in both directions.
@@ -11,8 +11,8 @@ Plug in your supply voltage for the board (e.g. 12V) and run the code!
 ## Software
 ### Functions
 #### .setBiDirMotorSpeed(direction, speed)
-The first argument tells the arduino in which direction it should turn (0 or 1).
-The second argument tells the arduino how fast you want the motor to turn. 255 is the maximum speed, 0 stops the motor.
+The first argument tells the Arduino in which direction it should turn (0 or 1).
+The second argument tells the Arduino how fast you want the motor to turn. 255 is the maximum speed, 0 stops the motor.
 
 With the provided example code, your motor should first accelerate in one direction to full speed, brake down, and then do the same in the other direction. 
 
