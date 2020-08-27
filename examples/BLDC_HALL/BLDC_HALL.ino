@@ -5,7 +5,7 @@
 */
 
 #include "IFX007T-Motor-Control.h"
-uint8_t rpmSpeed = 3000;      // initial speed
+uint8_t rpmSpeed = 6500;
 bool direction = 0;           // 0 or 1
 
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'

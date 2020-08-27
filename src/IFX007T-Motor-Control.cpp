@@ -115,36 +115,95 @@ void IFX007TMotorControl::setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle)
 }
 
 /**
- * For biderectional motor
+ * For bidirectional motor
+ * @brief One bidir motor can be wired to U and V, allowing one unidir motor on W. If the half of possible speed is ok as well, two bidir motors are possible with common V.
+ * @param motor 0: one bidir motor on U-V. 1: Two bidir motors, new dutycycle is for motor U-V. 2: Two bidir motors, new dutycycle is motor V-W.
  * @param direction can be 0 or 1
  * @param dutycycle speed, can be a value from 0 - 255
  */
-void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle)
+void IFX007TMotorControl::setBiDirMotorSpeed(uint8_t motor, bool direction, uint8_t dutycycle)
 {
-    //--------------- default Pin Configuration for the Bidirectional Motor ------------
-    uint8_t pin1 = 0;   // corresponds tu U   
+    // default Pin Configuration for one Bidirectional Motor
+    uint8_t pin1 = 0;   // corresponds to U
     uint8_t pin2 = 1;   // corresponds to V
+    uint8_t speed =0;
+    if(direction) speed = 127 - dutycycle/2;    //Calculate correct speed (motor stops with dutycycle of 127)
+    else speed = 127 + dutycycle/2;
 
-    if(dutycycle > 0)   
-    {
-        digitalWrite(_PinAssignment[InhibitPin][pin1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][pin2], HIGH);
+    switch(motor){
+      case 0:
+      if( !(_BiDirMotorStatus & ((1<<1) | (1<<2))) )
+      {
+        if(dutycycle > 0)   
+        {
+          _BiDirMotorStatus |= (1<<0);    //on
+          digitalWrite(_PinAssignment[InhibitPin][pin1], HIGH);
+          digitalWrite(_PinAssignment[InhibitPin][pin2], HIGH);
+        }
+        else
+        {
+          _BiDirMotorStatus &= ~(1<<0);   //off
+          digitalWrite(_PinAssignment[InhibitPin][pin1], LOW);
+          digitalWrite(_PinAssignment[InhibitPin][pin2], LOW);
+        }
+        
+        if(direction == 0)
+        {
+          analogWrite(_PinAssignment[InputPin][pin1], dutycycle);
+          digitalWrite(_PinAssignment[InputPin][pin2], LOW);
+        }
+        else
+        {
+          analogWrite(_PinAssignment[InputPin][pin2], dutycycle);
+          digitalWrite(_PinAssignment[InputPin][pin1], LOW);
+        }
+        break;
+      }
+      case 1:
+      if( !(_BiDirMotorStatus & (1<<0)) )   //Make sure, case 0 is not active
+      {
+        if(dutycycle > 0){
+          _BiDirMotorStatus |= (1<<1);    //on
+          digitalWrite(_PinAssignment[InhibitPin][0], HIGH);
+          analogWrite(_PinAssignment[InputPin][0], speed);
+                 
+          digitalWrite(_PinAssignment[InhibitPin][1], HIGH);  //Switch on common 50% PWM
+          analogWrite(_PinAssignment[InputPin][1], 127);
+          
+        }
+        else{
+          _BiDirMotorStatus &= ~(1<<1);   //off
+          digitalWrite(_PinAssignment[InhibitPin][0], LOW);
+          analogWrite(_PinAssignment[InputPin][0], 0);
+        }
+      }
+        break;
+      case 2:
+      if( !(_BiDirMotorStatus & (1<<0)) )    //Make sure, case 0 is not active
+      {
+        if(dutycycle > 0){
+            _BiDirMotorStatus |= (1<<2);    //on
+            digitalWrite(_PinAssignment[InhibitPin][2], HIGH);
+            analogWrite(_PinAssignment[InputPin][2], speed);
+                  
+            digitalWrite(_PinAssignment[InhibitPin][1], HIGH);  //Switch on common 50% PWM
+            analogWrite(_PinAssignment[InputPin][1], 127);
+            
+          }
+          else{
+            _BiDirMotorStatus &= ~(1<<2);   //off
+            digitalWrite(_PinAssignment[InhibitPin][2], LOW);
+            analogWrite(_PinAssignment[InputPin][2], 0);
+          }
+      }
+          break;
+      default:
+      break;
     }
-    else
-    {
-        digitalWrite(_PinAssignment[InhibitPin][pin1], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][pin2], LOW);
-    }
-    
-    if(direction == 0)
-    {
-        analogWrite(_PinAssignment[InputPin][pin1], dutycycle);
-        digitalWrite(_PinAssignment[InputPin][pin2], LOW);
-    }
-    else
-    {
-        analogWrite(_PinAssignment[InputPin][pin2], dutycycle);
-        digitalWrite(_PinAssignment[InputPin][pin1], LOW);
+
+    if(_BiDirMotorStatus == 0){               //Switch off common 50% PWM, if both Motors are off
+      digitalWrite(_PinAssignment[InhibitPin][1], LOW);
+      analogWrite(_PinAssignment[InhibitPin][1], 0);
     }
 }
 
@@ -170,6 +229,7 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
         pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
+        _CurrentDutyCycle = 80;
     }
     else                           //BEMF mode
     {
@@ -206,6 +266,7 @@ void IFX007TMotorControl::calculateLinearFunction(float *array, float *result)
  */
 bool IFX007TMotorControl::StartupBLDC(bool dir)
 {
+  
   _CurrentDutyCycle = 150;     //Initial Speed for Startup
   uint16_t i = 7000;           //Delay to start with
 
@@ -225,7 +286,7 @@ bool IFX007TMotorControl::StartupBLDC(bool dir)
     UpdateHardware(_Commutation);
     i=i-30;                     // Decrease the delay, maybe you have to play araound with this value
   }
-
+  
   _lastBLDCspeed = 1;
   return 1;
 }
