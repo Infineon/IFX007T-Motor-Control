@@ -14,6 +14,7 @@ Now pay attention: You can even drive two DC motors with independent speed and i
 
 ## Software
 ### Functions
+
 #### .setBiDirMotorSpeed(motor, direction, speed)
 The first argument 'motor' defines which Hardware setup you have and which speed you want to control according to the following table:
 
@@ -25,6 +26,7 @@ The first argument 'motor' defines which Hardware setup you have and which speed
 
 The second argument 'direction' tells the arduino in which direction it should turn (0 or 1).
 The third argument 'speed' tells the arduino how fast you want the motor to turn. 255 is the maximum speed, 0 stops the motor.
+
 
 With the provided example code, your motor should first accelerate in one direction to full speed, brake down, and then do the same in the other direction. 
 
