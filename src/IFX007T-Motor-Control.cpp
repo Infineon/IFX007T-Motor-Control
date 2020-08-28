@@ -200,10 +200,10 @@ void IFX007TMotorControl::setBiDirMotorSpeed(uint8_t motor, bool direction, uint
       default:
       break;
     }
-
+    
     if(_BiDirMotorStatus == 0){               //Switch off common 50% PWM, if both Motors are off
       digitalWrite(_PinAssignment[InhibitPin][1], LOW);
-      analogWrite(_PinAssignment[InhibitPin][1], 0);
+      analogWrite(_PinAssignment[InputPin][1], 0);
     }
 }
 
