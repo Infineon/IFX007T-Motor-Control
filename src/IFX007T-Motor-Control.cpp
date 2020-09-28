@@ -226,23 +226,32 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
     if(MyParameters.SensingMode)    //Hall-sensor mode
     {
         #define HALLmode
+        _CurrentDutyCycle = 80;     // dutycycle at the beginning
+
         pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
-        _CurrentDutyCycle = 80;
+
+        // Enable interrupts for hallsensor inputs
+        //PCICR  = 0b00000010;               // Enable pin change interrupt for pins 14:8 (See Atmel 328 datasheet, page 79)
+        //PCMSK1 = 0b00001110;               // Enable pin change interrupt for pins A1 (PCINT9), A2 (PCINT10), A3 (PCINT11)
+        DEBUG_PRINT_LN("Hallsensor mode");
+
+         _PI_Update_Timeout = millis() + 100;
     }
     else                           //BEMF mode
     {
         #define BEMFmode
         _V_neutral = analogRead(_PinAssignment[RefVoltage][0]);    //Dummy measurement
-        MotorParam = MyParameters;                                 //Store the parameters in a global variable
         calculateLinearFunction(MyParameters.V_neutral, MotorParam.V_neutralFunct);
         calculateLinearFunction(MyParameters.Phasedelay,  MotorParam.PhasedelayFunct);
         
         // Set ADC sampling time faster in order to be fast enough to detect commutation pulse:
         setADCspeedFast();
     }
-    _NumberofSteps = ((MyParameters.MotorPoles /2 +1) * 6);    //experimaental, need exact formula
+    MotorParam = MyParameters;                                 //Store the parameters in a global variable
+    //_NumberofSteps = ((MyParameters.MotorPoles /2 +1) * 6);    //experimaental, need exact formula
+    _NumberofSteps = MyParameters.MotorPoles *3;    //experimaental, need exact formula
 }
 
 
@@ -564,81 +573,67 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
 
 /**
  * User function
- * Set the RPM speed and direction for Hall sensor BLDC
+ * Set the RPM speed and direction for hallsensor BLDCM
 */
 void IFX007TMotorControl::setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed)
 {
-  if (_ClosedLoop==0) {
-    
-    delayMicroseconds(_OpenLoopDelay);
-    CommutateHallBLDC(direction);
-    UpdateHall();
-    
-  }
-  else {
-    CommutateHallBLDC(direction);
-    while(_oldHall == UpdateHall());
-    _HallCounts++;
-  }
-
+  while(_oldHall == UpdateHall());
+  _oldHall = _latestHall;
+  CommutateHallBLDC(direction);
+  _HallCounts++;
   PI_Regulator_DoWork(desired_rpmSpeed);
 }
 
 
 /**
  * For Hall sensor BLDC
+ * The function will be executed every 100ms.
+ * It mesaures the actual RpM speed, compares it to the desired RpM speed and regulates the CurrentDutyCycle using a PI-regulator
 */
-void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed) {
-  //Do every 10 ms and in the open loop used  to accelerate and in the closed loop used to eliminate the error
-  if (millis() > _PI_Update_Timeout) {
-    uint16_t RPM = (_HallCounts * 100 * 60)/ MotorParam.MotorPoles;
-    _LastRPM = RPM;
-    float RPMf = (float) RPM;
+void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
+{
+  if (millis() > _PI_Update_Timeout)
+  {
+    // Formula: RPM = ((Hallcounts-1) / 3 * MotorPoles) * 10 * 60
+    float RPMf = ((_HallCounts)/ MotorParam.MotorPoles)*200.0;
     float Error = desired_rpmSpeed - RPMf;
     _PI_Integral = _PI_Integral + Error;
-    float pwm = PI_REG_K*Error + PI_REG_I * _PI_Integral;
+    float pwm = 0.01*Error + 0.01 * _PI_Integral;
     //Limit PWM
     if (pwm > 200) pwm = 200;
     if (pwm < 30) pwm = 30;
     _CurrentDutyCycle = (uint8_t) pwm;    
     _HallCounts = 0;
-    _PI_Update_Timeout = millis() + 10;
+    _PI_Update_Timeout = millis() + 100;
   }
 }
 
 /**
  * For Hall sensor BLDC
 */
-void IFX007TMotorControl::CommutateHallBLDC(bool direction) {
-
+void IFX007TMotorControl::CommutateHallBLDC(bool direction)
+{
   UpdateHardware(_Commutation);
   if(direction == 0)
   {
-    _Commutation ++;
+    _Commutation++ ;
     if (_Commutation==6) _Commutation=0;
   }
   else
   {
     if (_Commutation==0) _Commutation=6;
-    _Commutation --;
+    _Commutation-- ;
   }
 }
 
 
 /**
- * To get the new position information of the motor and compared to the older one.
- * every 10 ms
+ * For hall BLDCM
+ * To get the new position information of the motor.
  */
-uint8_t IFX007TMotorControl::UpdateHall() {
-  _oldHall = _latestHall;
+uint8_t IFX007TMotorControl::UpdateHall(void)
+{
   _latestHall = (digitalRead(A3)<<2) | (digitalRead(A2)<<1) | digitalRead(A1);
-  if (_OpenLoopSteps > 0) {
-    if (_oldHall != _latestHall) _OpenLoopSteps--;    
-    _PI_Update_Timeout = millis()+10;
-  }
-  else {
-    _ClosedLoop = 1;
-  }
   return _latestHall;
 }
 
