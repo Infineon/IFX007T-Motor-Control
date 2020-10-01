@@ -228,9 +228,15 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
         #define HALLmode
         _CurrentDutyCycle = 80;     // dutycycle at the beginning
 
+<<<<<<< Updated upstream
         pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
         pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
+=======
+        //pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
+        //pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
+        //pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
+>>>>>>> Stashed changes
 
         // Enable interrupts for hallsensor inputs
         //PCICR  = 0b00000010;               // Enable pin change interrupt for pins 14:8 (See Atmel 328 datasheet, page 79)
@@ -575,15 +581,66 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
  * User function
  * Set the RPM speed and direction for hallsensor BLDCM
 */
-void IFX007TMotorControl::setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed)
+void IFX007TMotorControl::setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed, bool FieldWeakening)
 {
   while(_oldHall == UpdateHall());
   _oldHall = _latestHall;
   CommutateHallBLDC(direction);
   _HallCounts++;
+<<<<<<< Updated upstream
   PI_Regulator_DoWork(desired_rpmSpeed);
+=======
+  if(desired_rpmSpeed>0) PI_Regulator_DoWork(desired_rpmSpeed);
+  else end();
+ 
 }
 
+/**
+ * User function
+ * Set the Dutycycle speed and direction for hallsensor BLDCM
+*/
+void IFX007TMotorControl::setHallBLDCmotorDCspeed(bool direction, uint8_t dutycycle, bool FieldWeakening)
+{
+    _CurrentDutyCycle = dutycycle;
+    if(dutycycle > 10)
+    {
+      if(_lastBLDCspeed == 0)
+      {
+        _oldHall = UpdateHall();
+        UpdateHardware( HallPattern[FieldWeakening][direction][_oldHall] );
+        _lastBLDCspeed = 1;
+      }
+      else
+      {
+        if(WaitForCommutation())
+        {
+          _oldHall = _latestHall;
+          UpdateHardware( HallPattern[FieldWeakening][direction][_oldHall] );
+        }
+      }
+    }
+    else
+    {
+      end();
+      _lastBLDCspeed = 0;
+    } 
+>>>>>>> Stashed changes
+}
+
+bool IFX007TMotorControl::WaitForCommutation(void)
+{
+  uint32_t timestamp = millis();
+  while(1)
+  {
+    if(_oldHall != UpdateHall() ) return 1;
+    else if( (millis()-timestamp) > TIMEOUT)
+    {
+      end();
+      _lastBLDCspeed = 0;
+      return 0;
+    }
+  }
+}
 
 /**
  * For Hall sensor BLDC
@@ -594,17 +651,32 @@ void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
 {
   if (millis() > _PI_Update_Timeout)
   {
+<<<<<<< Updated upstream
     // Formula: RPM = ((Hallcounts-1) / 3 * MotorPoles) * 10 * 60
     float RPMf = ((_HallCounts)/ MotorParam.MotorPoles)*200.0;
     float Error = desired_rpmSpeed - RPMf;
     _PI_Integral = _PI_Integral + Error;
     float pwm = 0.01*Error + 0.01 * _PI_Integral;
+=======
+    float RPM = 0.0;
+    // Formula for 100ms intervall: RPM = (Hallcounts / (3 * MotorPoles)) * 10 * 60
+    RPM = (_HallCounts/ MotorParam.MotorPoles) * 200;
+    _PI_Update_Timeout = millis() + 100;
+    
+    float Error = desired_rpmSpeed - RPM;
+    if(_CurrentDutyCycle < 240) _PI_Integral = _PI_Integral + Error;
+    float pwm = 0.001*Error + 0.005 * _PI_Integral;
+>>>>>>> Stashed changes
     //Limit PWM
-    if (pwm > 200) pwm = 200;
+    if (pwm > 240) pwm = 240;
     if (pwm < 30) pwm = 30;
     _CurrentDutyCycle = (uint8_t) pwm;    
     _HallCounts = 0;
+<<<<<<< Updated upstream
     _PI_Update_Timeout = millis() + 100;
+=======
+   
+>>>>>>> Stashed changes
   }
 }
 
@@ -629,11 +701,39 @@ void IFX007TMotorControl::CommutateHallBLDC(bool direction)
 
 /**
  * For hall BLDCM
+<<<<<<< Updated upstream
  * To get the new position information of the motor.
  */
 uint8_t IFX007TMotorControl::UpdateHall(void)
 {
   _latestHall = (digitalRead(A3)<<2) | (digitalRead(A2)<<1) | digitalRead(A1);
+=======
+ * Read the hallsensor status, to get the new position information of the motor.
+ * Needs special handling for the XMC, as digitalRead() on Analog pins does only work on Arduino
+ */
+uint8_t IFX007TMotorControl::UpdateHall(void)
+{
+  _latestHall = 0; 
+  
+  #ifdef ARDUINO_AVR_UNO                                                  // For Arduino Boards 
+
+  // Optimized for Arduino: max tested speed: 6000 RpM
+  _latestHall = (digitalRead(_PinAssignment[AdcPin][0])<<2) | (digitalRead(_PinAssignment[AdcPin][1])<<1) | digitalRead(_PinAssignment[AdcPin][2]);
+
+
+  #elif ((XMC1100_Boot_Kit)  || (XMC4700_Relax_Kit))                // For XMC boards 
+
+  //Only for XMC, max speed with Arduino only 3500 RpM
+  for(uint8_t i=0; i<3; i++)
+  {
+    uint16_t out = analogRead(_PinAssignment[AdcPin][i]);
+    if(out>512) out = 1;
+    else out = 0;
+    _latestHall = _latestHall | (out<<(2-i));
+  }
+  #endif
+  
+>>>>>>> Stashed changes
   return _latestHall;
 }
 
@@ -796,7 +896,7 @@ void IFX007TMotorControl::setADCspeedFast(void)
 
 void IFX007TMotorControl::setPwmFrequency(uint8_t pin, uint16_t divisor)
 {
-  setAnalogWriteFrequency(pin, 15000);       // 31250 Hz, obviously we nee the half (fault in XMCforArduino?)
+  setAnalogWriteFrequency(pin, 30000);       // 31250 Hz, obviously we nee the half (fault in XMCforArduino?)
 }
 
 void IFX007TMotorControl::setADCspeedFast(void)

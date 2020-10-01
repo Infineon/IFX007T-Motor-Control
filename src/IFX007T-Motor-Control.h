@@ -5,7 +5,7 @@
 #include <Arduino.h>
 
 //======= Very important ========
-//#define DEBUG_IFX007T         //Uncomment, if you wish debug output or tune the motor (Disables automatic V_neutralOffset)
+#define DEBUG_IFX007T         //Uncomment, if you wish debug output or tune the motor (Disables automatic V_neutralOffset)
 //===============================
 
 #ifdef DEBUG_IFX007T
@@ -26,6 +26,7 @@
 
 #define PI_REG_K 0.01
 #define PI_REG_I 0.001
+#define TIMEOUT 500        // milliseconds
 
 typedef struct
     {
@@ -73,7 +74,8 @@ class IFX007TMotorControl
         void    configureBLDCMotor(BLDCParameter MyParameters);  
         void    setBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed);
         void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);
-        void    setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed);                  
+        void    setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed, bool FieldWeakening);
+        void    setHallBLDCmotorDCspeed(bool direction, uint8_t dutycycle, bool FieldWeakening);                  
         void    DebugRoutine(uint8_t Serialinput);
         
     //------------- Variables ----------------------------------------------------
@@ -95,6 +97,7 @@ class IFX007TMotorControl
         void    PI_Regulator_DoWork(uint16_t desired_rpmSpeed);
         void    CommutateHallBLDC(bool direction);
         uint8_t UpdateHall(void);
+        bool    WaitForCommutation(void);
         
         void    setADCspeedFast(void);
 
@@ -118,20 +121,36 @@ class IFX007TMotorControl
         uint32_t timerstart;
         uint32_t _TimeperRotation;
 
-        // For BLDC Hallsensor mode
-        uint8_t _ClosedLoop = 0;
-        uint8_t _OpenLoopSteps = 100;
-        uint16_t _OpenLoopDelay = 3000;
-        uint8_t _oldHall, _latestHall = 0;
-        uint16_t _HallCounts = 0;
-        unsigned long _PI_Update_Timeout = 999999999;
-        uint16_t _LastRPM = 0; //the current rotate speed
-        float _PI_Integral = 0.0; 
-
         // Values to start with, if debug option is turned on
         uint8_t iterations = 3;
         int16_t phasedelay = 90;
         uint8_t _V_NeutralOffset  = 100;
+
+        // --------- For BLDC Hallsensor mode ----------
+
+        /**
+         * The first index switches between normal mode and fast mode (field weakening range)
+         * The second index switches the direction between forwards and backwards
+         * The third index for the pattern is the Hallsensor input in a dezimal value.
+         * The value at the index poition delivers the commutation state for the next step.
+         */
+        uint8_t HallPattern[2][2][7] = {
+            {
+                {9, 4,0,5,2,3,1},               /* Normal foreward */
+                {9, 1,3,2,5,0,4}                /* Normal backward */
+            },
+            {
+                {9, 5,1,0,3,4,2},               /* Fast foreward */
+                {9, 0,2,1,4,5,3}                /* Fast backward */
+            }
+        };
+
+        uint8_t _oldHall, _latestHall = 0;
+        uint16_t _HallCounts = 0;
+        unsigned long _PI_Update_Timeout = 999999999;
+        float _PI_Integral = 0.0; 
+
+
 
 };
 
