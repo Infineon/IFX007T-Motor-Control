@@ -28,10 +28,13 @@ void setup()
 void loop()
 {
   dutycycle = analogRead(A5) / 4;
-  if(((dutycycle > (old_dutycycle+5)) || (dutycycle < (old_dutycycle-5))) && Counter>100)
+  if(Counter>100)
   {
-    Serial.println(dutycycle);
-    old_dutycycle = dutycycle;
+    if((dutycycle > (old_dutycycle+5)) || (dutycycle < (old_dutycycle-5)) && dutycycle != 0)
+    {
+      Serial.println(dutycycle);
+      old_dutycycle = dutycycle;
+    }
     Counter = 0;
   }
   if (Serial.available() > 0)

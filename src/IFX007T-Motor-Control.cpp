@@ -228,15 +228,9 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
         #define HALLmode
         _CurrentDutyCycle = 80;     // dutycycle at the beginning
 
-<<<<<<< Updated upstream
-        pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
-        pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
-        pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
-=======
         //pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
         //pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
         //pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
->>>>>>> Stashed changes
 
         // Enable interrupts for hallsensor inputs
         //PCICR  = 0b00000010;               // Enable pin change interrupt for pins 14:8 (See Atmel 328 datasheet, page 79)
@@ -579,25 +573,39 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
 
 /**
  * User function
- * Set the RPM speed and direction for hallsensor BLDCM
+ * Set the RPM speed, direction and fieldmode for hallsensor BLDCM
 */
 void IFX007TMotorControl::setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed, bool FieldWeakening)
 {
-  while(_oldHall == UpdateHall());
-  _oldHall = _latestHall;
-  CommutateHallBLDC(direction);
-  _HallCounts++;
-<<<<<<< Updated upstream
-  PI_Regulator_DoWork(desired_rpmSpeed);
-=======
-  if(desired_rpmSpeed>0) PI_Regulator_DoWork(desired_rpmSpeed);
-  else end();
- 
+  if(desired_rpmSpeed>0)
+    {
+      if(_lastBLDCspeed == 0)
+      {
+        _oldHall = UpdateHall();
+        UpdateHardware( HallPattern[FieldWeakening][direction][_oldHall] );
+        _lastBLDCspeed = 1;
+      }
+      else
+      {
+        if(WaitForCommutation())
+        {
+          _oldHall = _latestHall;
+          UpdateHardware( HallPattern[FieldWeakening][direction][_oldHall] );
+        }
+      }
+      PI_Regulator_DoWork(desired_rpmSpeed);
+      _HallCounts++;
+    }
+    else
+    {
+      end();
+      _lastBLDCspeed = 0;
+    } 
 }
 
 /**
  * User function
- * Set the Dutycycle speed and direction for hallsensor BLDCM
+ * Set the Dutycycle speed, direction and fieldmode for hallsensor BLDCM
 */
 void IFX007TMotorControl::setHallBLDCmotorDCspeed(bool direction, uint8_t dutycycle, bool FieldWeakening)
 {
@@ -624,9 +632,13 @@ void IFX007TMotorControl::setHallBLDCmotorDCspeed(bool direction, uint8_t dutycy
       end();
       _lastBLDCspeed = 0;
     } 
->>>>>>> Stashed changes
 }
 
+/**
+ * For Hallsensor BLDC
+ * this function is executed until either the Hallsensor pattern changes or a timer is out of time.
+ * The timer is a kind of watchdog that makes sure, that the program gets not stuck, if the dutycycle was too low.
+ */
 bool IFX007TMotorControl::WaitForCommutation(void)
 {
   uint32_t timestamp = millis();
@@ -651,13 +663,6 @@ void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
 {
   if (millis() > _PI_Update_Timeout)
   {
-<<<<<<< Updated upstream
-    // Formula: RPM = ((Hallcounts-1) / 3 * MotorPoles) * 10 * 60
-    float RPMf = ((_HallCounts)/ MotorParam.MotorPoles)*200.0;
-    float Error = desired_rpmSpeed - RPMf;
-    _PI_Integral = _PI_Integral + Error;
-    float pwm = 0.01*Error + 0.01 * _PI_Integral;
-=======
     float RPM = 0.0;
     // Formula for 100ms intervall: RPM = (Hallcounts / (3 * MotorPoles)) * 10 * 60
     RPM = (_HallCounts/ MotorParam.MotorPoles) * 200;
@@ -665,18 +670,13 @@ void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
     
     float Error = desired_rpmSpeed - RPM;
     if(_CurrentDutyCycle < 240) _PI_Integral = _PI_Integral + Error;
-    float pwm = 0.001*Error + 0.005 * _PI_Integral;
->>>>>>> Stashed changes
+    float pwm = PI_REG_K*Error + PI_REG_I * _PI_Integral;
     //Limit PWM
     if (pwm > 240) pwm = 240;
     if (pwm < 30) pwm = 30;
     _CurrentDutyCycle = (uint8_t) pwm;    
     _HallCounts = 0;
-<<<<<<< Updated upstream
-    _PI_Update_Timeout = millis() + 100;
-=======
    
->>>>>>> Stashed changes
   }
 }
 
@@ -701,13 +701,6 @@ void IFX007TMotorControl::CommutateHallBLDC(bool direction)
 
 /**
  * For hall BLDCM
-<<<<<<< Updated upstream
- * To get the new position information of the motor.
- */
-uint8_t IFX007TMotorControl::UpdateHall(void)
-{
-  _latestHall = (digitalRead(A3)<<2) | (digitalRead(A2)<<1) | digitalRead(A1);
-=======
  * Read the hallsensor status, to get the new position information of the motor.
  * Needs special handling for the XMC, as digitalRead() on Analog pins does only work on Arduino
  */
@@ -733,7 +726,6 @@ uint8_t IFX007TMotorControl::UpdateHall(void)
   }
   #endif
   
->>>>>>> Stashed changes
   return _latestHall;
 }
 
