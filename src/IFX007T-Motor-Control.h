@@ -23,15 +23,16 @@
 #define InhibitPin 1
 #define AdcPin 2
 #define RefVoltage 3
+// ----------------------------------------------------------------------------------------------------------------
 
-#define PI_REG_K 0.01
-#define PI_REG_I 0.007
 #define TIMEOUT 500        // milliseconds
 
 typedef struct
     {
-        uint8_t MotorPoles;
+        uint8_t MotorPolepairs;
         bool SensingMode;
+        float PI_Reg_K;
+        float PI_Reg_I;
         float V_neutral[4];
         float V_neutralFunct[2];        //Slope, offset
         float Phasedelay[4];
@@ -58,9 +59,6 @@ typedef struct
 class IFX007TMotorControl
 {
     public:
-
-    
-
     //------------- User Functions --------------------------------------------------------------------------------
 
                 IFX007TMotorControl(void);
@@ -75,16 +73,14 @@ class IFX007TMotorControl
         void    setBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed);
         void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);
         void    setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed, bool FieldWeakening);
-        void    setHallBLDCmotorDCspeed(bool direction, uint8_t dutycycle, bool FieldWeakening);                  
+        void    setHallBLDCmotorDCspeed(bool direction, uint8_t dutycycle, bool FieldWeakening); 
+        uint8_t CommutateHallBLDC(uint8_t Dutycycle, bool hallsensor);                 
         void    DebugRoutine(uint8_t Serialinput);
         
     //------------- Variables ----------------------------------------------------
+        uint8_t _Commutation = 0;
         BLDCParameter MotorParam;
         BLDCPinSetting MotorPins;
-
-        
-        
-        
 
     private:
         bool    StartupBLDC(bool dir);                  // Algorithm to start up the motor, as long as theres no BEMF
@@ -95,7 +91,6 @@ class IFX007TMotorControl
         void    calculateLinearFunction(float *array, float *result);
         void    setPwmFrequency(uint8_t pin, uint16_t divisor);
         void    PI_Regulator_DoWork(uint16_t desired_rpmSpeed);
-        void    CommutateHallBLDC(bool direction);
         uint8_t UpdateHall(void);
         bool    WaitForCommutation(void);
         
@@ -113,7 +108,6 @@ class IFX007TMotorControl
 
         uint16_t _V_neutral;
         uint8_t _NumberofSteps;
-        uint8_t _Commutation = 0;       //Set to 0
         uint16_t _lastBLDCspeed;
         uint8_t _CurrentDutyCycle;
         bool _debugPin;
@@ -130,8 +124,8 @@ class IFX007TMotorControl
 
         /**
          * The first index switches between normal mode and fast mode (field weakening range)
-         * The second index switches the direction between forwards and backwards
-         * The third index for the pattern is the Hallsensor input in a dezimal value.
+         * The second index switches the direction between forward and backward
+         * The third index for the pattern is the Hallsensor input as a dezimal value (e.g 0b00000101 is 5 dez)
          * The value at the index poition delivers the commutation state for the next step.
          */
         uint8_t HallPattern[2][2][7] = {

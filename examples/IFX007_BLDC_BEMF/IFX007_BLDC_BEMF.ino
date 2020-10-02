@@ -19,7 +19,7 @@ void setup()
 
   MyMotor.begin();
   // Adapt the following values according to the README if necessary
-  MyMotor.MotorParam.MotorPoles = 12;       // Count the coils in your motor (only necessary for accurate RPM speed) 
+  MyMotor.MotorParam.MotorPolepairs = 4;    // Amount of polepairs. If your motor has 8 poles, it has 4 pole PAIRS) 
   MyMotor.MotorParam.SensingMode = 0;       // If you use a Hallsensor set 1, for sensorless application 0
   
   MyMotor.MotorParam.V_neutral[0] = 160;    // High dutycycle, when V_neutral is const

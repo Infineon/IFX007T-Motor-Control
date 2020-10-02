@@ -1,8 +1,6 @@
 /**
  * IFX007T-Motor-Control.cpp    -   Library for Arduino to control the BLDC Motor Shield with IFX007T Motor driver.
  * 
- * TODO:
- * Implement RPM Function for sensorless BLDC
  */
 
 #include "IFX007T-Motor-Control.h"
@@ -208,8 +206,8 @@ void IFX007TMotorControl::setBiDirMotorSpeed(uint8_t motor, bool direction, uint
 }
 
 /**
- * MotorPoles: amount of teeth (should be a multiple of 3)
- * NrMagnets: Numer of Magnets (should be a multiple of 2)
+ * amount of teeth should be a multiple of 3
+ * Numer of Magnets should be a multiple of 2
  * Hallsensor: 0 means BEMF-Mode, 1 means Hallsensor-mode
  * 
  * Refer to: https://www.allaboutcircuits.com/industry-articles/3-phase-brushless-dc-motor-control-with-hall-sensors/
@@ -226,6 +224,7 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
     if(MyParameters.SensingMode)    //Hall-sensor mode
     {
         #define HALLmode
+        DEBUG_PRINT_LN("Hallsensor mode");
         _CurrentDutyCycle = 80;     // dutycycle at the beginning
 
         //pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
@@ -235,13 +234,14 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
         // Enable interrupts for hallsensor inputs
         //PCICR  = 0b00000010;               // Enable pin change interrupt for pins 14:8 (See Atmel 328 datasheet, page 79)
         //PCMSK1 = 0b00001110;               // Enable pin change interrupt for pins A1 (PCINT9), A2 (PCINT10), A3 (PCINT11)
-        DEBUG_PRINT_LN("Hallsensor mode");
+        
 
          _PI_Update_Timeout = millis() + 100;
     }
     else                           //BEMF mode
     {
         #define BEMFmode
+        DEBUG_PRINT_LN("Sensorless BEMF mode");
         _V_neutral = analogRead(_PinAssignment[RefVoltage][0]);    //Dummy measurement
         calculateLinearFunction(MyParameters.V_neutral, MotorParam.V_neutralFunct);
         calculateLinearFunction(MyParameters.Phasedelay,  MotorParam.PhasedelayFunct);
@@ -250,10 +250,8 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
         setADCspeedFast();
     }
     MotorParam = MyParameters;                                 //Store the parameters in a global variable
-    //_NumberofSteps = ((MyParameters.MotorPoles /2 +1) * 6);    //experimaental, need exact formula
-    _NumberofSteps = MyParameters.MotorPoles *3;    //experimaental, need exact formula
+    _NumberofSteps = MyParameters.MotorPolepairs * 6;
 }
-
 
 /**
  * Program function
@@ -664,13 +662,14 @@ void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
   if (millis() > _PI_Update_Timeout)
   {
     float RPM = 0.0;
-    // Formula for 100ms intervall: RPM = (Hallcounts / (3 * MotorPoles)) * 10 * 60
-    RPM = (_HallCounts/ MotorParam.MotorPoles) * 200;
+    // Formula for 100ms intervall: RPM = (Hallcounts / (6 * MotorPolepairs)) * 10 * 60
+    
+    RPM = (_HallCounts/ _NumberofSteps) * 600;
     _PI_Update_Timeout = millis() + 100;
     
     float Error = desired_rpmSpeed - RPM;
     if(_CurrentDutyCycle < 240) _PI_Integral = _PI_Integral + Error;
-    float pwm = PI_REG_K*Error + PI_REG_I * _PI_Integral;
+    float pwm = MotorParam.PI_Reg_K * Error + MotorParam.PI_Reg_I * _PI_Integral;
     //Limit PWM
     if (pwm > 240) pwm = 240;
     if (pwm < 30) pwm = 30;
@@ -681,21 +680,16 @@ void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
 }
 
 /**
- * For Hall sensor BLDC
+ * For BLDC_Find_Polepairs test program
 */
-void IFX007TMotorControl::CommutateHallBLDC(bool direction)
+uint8_t IFX007TMotorControl::CommutateHallBLDC(uint8_t Dutycycle, bool hallsensor)
 {
+  _CurrentDutyCycle = Dutycycle;
+   _Commutation++ ;
+  if (_Commutation==6) _Commutation=0;
   UpdateHardware(_Commutation);
-  if(direction == 0)
-  {
-    _Commutation++ ;
-    if (_Commutation==6) _Commutation=0;
-  }
-  else
-  {
-    if (_Commutation==0) _Commutation=6;
-    _Commutation-- ;
-  }
+  if(hallsensor) return UpdateHall();
+  else return 0;
 }
 
 
@@ -708,9 +702,9 @@ uint8_t IFX007TMotorControl::UpdateHall(void)
 {
   _latestHall = 0; 
   
-  #ifdef ARDUINO_AVR_UNO                                                  // For Arduino Boards 
+  #ifdef ARDUINO_AVR_UNO                                             // For Arduino Boards 
 
-  // Optimized for Arduino: max tested speed: 6000 RpM
+  // Optimized for Arduino: max tested speed: 3300 RpM (WK = 0), 6000 RpM (WK = 1)
   _latestHall = (digitalRead(_PinAssignment[AdcPin][0])<<2) | (digitalRead(_PinAssignment[AdcPin][1])<<1) | digitalRead(_PinAssignment[AdcPin][2]);
 
 

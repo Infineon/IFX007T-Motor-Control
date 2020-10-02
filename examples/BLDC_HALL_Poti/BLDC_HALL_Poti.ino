@@ -7,7 +7,7 @@
 #include "IFX007T-Motor-Control.h"
 uint16_t dutycycle, old_dutycycle = 0;
 bool direction = 0;           // 0 or 1
-bool weakening = 0;        // 0=normal, 1=weak
+bool weakening = 0;           // 0=normal, 1=weak
 uint16_t Counter = 0;
 
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'
@@ -18,17 +18,18 @@ void setup()
   Serial.begin(115200);
   Serial.println(" Infineon hall sensor BLDC motor test! ");
   MyMotor.begin();
+
   // Adapt the following values according to the README if necessary
-  MyMotor.MotorParam.MotorPoles = 8;        // Pole pair number
-  MyMotor.MotorParam.SensingMode = 1;       // If you use a Hallsensor set 1, for sensorless application 0
+  MyMotor.MotorParam.MotorPolepairs = 4;        // Amount of polepairs. If your motor has 8 poles, it has 4 pole PAIRS
+  MyMotor.MotorParam.SensingMode = 1;           // If you use a Hallsensor set 1, for sensorless application 0
   
   MyMotor.configureBLDCMotor(MyMotor.MotorParam);
 }
 
 void loop()
 {
-  dutycycle = analogRead(A5) / 4;
-  if(Counter>100)
+  dutycycle = analogRead(A5) / 4;           // 100k Potentiometer connected to A5. 
+  if(Counter>100)                           // Make sure your monitor does not get spammed by wrong analog readings
   {
     if((dutycycle > (old_dutycycle+5)) || (dutycycle < (old_dutycycle-5)) && dutycycle != 0)
     {
@@ -46,6 +47,8 @@ void loop()
     if(in == 'm') direction = 1;
     Serial.print("WK: ");
     Serial.println(weakening);
+    Serial.print("Dir: ");
+    Serial.println(direction);
   }
 
   MyMotor.setHallBLDCmotorDCspeed(direction, dutycycle, weakening);
