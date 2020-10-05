@@ -22,7 +22,7 @@ void setup()
   MyMotor.MotorParam.MotorPolepairs = 4;        // Amount of polepairs. If your motor has 8 poles, it has 4 pole PAIRS
   MyMotor.MotorParam.SensingMode = 1;           // If you use a Hallsensor set 1, for sensorless application 0
   MyMotor.MotorParam.PI_Reg_P = 0.01;           // P value for the PI-RPM regulator
-  MyMotor.MotorParam.PI_Reg_I = 0.007;          // I value for the PI-RPM regulator
+  MyMotor.MotorParam.PI_Reg_I = 0.01;          // I value for the PI-RPM regulator
   
   MyMotor.configureBLDCMotor(MyMotor.MotorParam);
 }

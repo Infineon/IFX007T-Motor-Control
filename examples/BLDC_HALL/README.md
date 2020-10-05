@@ -30,7 +30,7 @@ The paramter FieldWeakening can be 0 or 1. 0 claims 'normal' mode, with 1 the mo
 
 #### .configureBLDCMotor(MyMotor.MotorParam)
 This function transmits the srtuct element 'MotorParam' to configure the behavior of your BLDC. Use it just like in the example sketch.
-Edit the entry 'MotorPoles' suited to your BLDC.  
+Edit the entry 'MotorPolepairs' suited to your BLDC.  
 
 
 ## Default Pin Assignment

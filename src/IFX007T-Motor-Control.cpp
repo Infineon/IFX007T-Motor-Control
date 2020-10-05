@@ -1,6 +1,16 @@
 /**
- * IFX007T-Motor-Control.cpp    -   Library for Arduino to control the BLDC Motor Shield with IFX007T Motor driver.
+ * IFX007T-Motor-Control.cpp    -   Library for the Infineon BLDC Motor Control Shield with IFX007T Motor driver.
  * 
+ * Tested microcontroller boards: 
+ *    Arduino UNO
+ *    XMC4700 Relax kit for 5V shields
+ * 
+ * The Library supports the following operation modes:
+ *    sensorless BEMF mode (BLDC)
+ *    hallsensor mode (BLDC)
+ *    3 unipolar motors (DC)
+ *    1 bidirectional motor (DC)
+ *    2 bidirectional motors (DC)
  */
 
 #include "IFX007T-Motor-Control.h"
@@ -250,7 +260,7 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
         setADCspeedFast();
     }
     MotorParam = MyParameters;                                 //Store the parameters in a global variable
-    _NumberofSteps = MyParameters.MotorPolepairs * 6;
+    _NumberofSteps = (float) MyParameters.MotorPolepairs * 6.0;
 }
 
 /**
@@ -662,14 +672,17 @@ void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
   if (millis() > _PI_Update_Timeout)
   {
     float RPM = 0.0;
+    float hallcounts = (float) _HallCounts;
     // Formula for 100ms intervall: RPM = (Hallcounts / (6 * MotorPolepairs)) * 10 * 60
     
     RPM = (_HallCounts/ _NumberofSteps) * 600;
     _PI_Update_Timeout = millis() + 100;
     
+    DEBUG_PRINT_LN(RPM);
+
     float Error = desired_rpmSpeed - RPM;
     if(_CurrentDutyCycle < 240) _PI_Integral = _PI_Integral + Error;
-    float pwm = MotorParam.PI_Reg_K * Error + MotorParam.PI_Reg_I * _PI_Integral;
+    float pwm = MotorParam.PI_Reg_P * Error + MotorParam.PI_Reg_I * _PI_Integral;
     //Limit PWM
     if (pwm > 240) pwm = 240;
     if (pwm < 30) pwm = 30;

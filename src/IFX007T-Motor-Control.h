@@ -31,7 +31,7 @@ typedef struct
     {
         uint8_t MotorPolepairs;
         bool SensingMode;
-        float PI_Reg_K;
+        float PI_Reg_P;
         float PI_Reg_I;
         float V_neutral[4];
         float V_neutralFunct[2];        //Slope, offset
@@ -107,7 +107,7 @@ class IFX007TMotorControl
         uint8_t _BiDirMotorStatus=0;
 
         uint16_t _V_neutral;
-        uint8_t _NumberofSteps;
+        float _NumberofSteps;
         uint16_t _lastBLDCspeed;
         uint8_t _CurrentDutyCycle;
         bool _debugPin;
