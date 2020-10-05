@@ -5,9 +5,13 @@
 */
 
 #include "IFX007T-Motor-Control.h"
+
+// ---------------------------------------------------------------------
+#define DIRECTION  0           // 0 or 1
+#define WEAKENING  0           // 0=normal, 1=weak (fast)
+// ---------------------------------------------------------------------
+
 uint16_t rpmSpeed = 800;
-bool direction = 0;           // 0 or 1
-bool weakening = 0;           // 0=normal, 1=weak
 
 //Create an instance of 'IFX007TMotorControl' called 'MyMotor'
 IFX007TMotorControl MyMotor = IFX007TMotorControl();
@@ -29,7 +33,7 @@ void setup()
 
 void loop()
 {
-  MyMotor.setHallBLDCmotorRPMspeed(direction, rpmSpeed, weakening);
+  MyMotor.setHallBLDCmotorRPMspeed(DIRECTION, rpmSpeed, WEAKENING);
 
   if (Serial.available() > 0)
   {

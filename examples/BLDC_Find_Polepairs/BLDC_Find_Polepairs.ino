@@ -5,12 +5,13 @@
 #include "IFX007T-Motor-Control.h"
 
 // ----------- Change to 0 if your motor has no hallsensor -------------
-bool Hallsensor = 1;
+#define HALLSENSOR 1
 // ---------------------------------------------------------------------
+
+uint8_t Dutycycle = 45;         // Choose a dutycycle as low as possible
 
 uint8_t CommutationStep = 1;
 uint8_t Counter = 0;
-uint8_t Dutycycle = 45;
 uint8_t Magnetpoles = 0;
 uint8_t Magnetpolepairs = 0;
 uint8_t Hallpattern = 0;
@@ -25,7 +26,7 @@ void setup()
   Serial.println(" Infineon BLDC Polepairfinder ");
   Serial.println(" ");
   MyMotor.begin();
-  MyMotor.MotorParam.SensingMode = Hallsensor;
+  MyMotor.MotorParam.SensingMode = HALLSENSOR;
   MyMotor.configureBLDCMotor(MyMotor.MotorParam);
 }
 
@@ -37,7 +38,7 @@ void loop()
     Serial.println("Press enter to bring motor in start position");
     while(Serial.available() == 0);
     in = Serial.read();
-    Hallpattern = MyMotor.CommutateHallBLDC(Dutycycle, Hallsensor);     //go in initial position
+    Hallpattern = MyMotor.CommutateHallBLDC(Dutycycle, HALLSENSOR);     //go in initial position
     delay(100);
     MyMotor.end();
 
@@ -52,13 +53,13 @@ void loop()
     while(Serial.available() == 0)
     {
         Counter ++;
-        Hallpattern = MyMotor.CommutateHallBLDC(Dutycycle, Hallsensor);
+        Hallpattern = MyMotor.CommutateHallBLDC(Dutycycle, HALLSENSOR);
         Serial.print(Counter);
         if(Counter < 10) Serial.print(" ");         //Align values
         Serial.print("          ");
         Serial.print(MyMotor._Commutation);
         Serial.print("          ");
-        if(Hallsensor == 1)
+        if(HALLSENSOR == 1)
         {
             Serial.print(Hallpattern);
             Serial.print("          ");

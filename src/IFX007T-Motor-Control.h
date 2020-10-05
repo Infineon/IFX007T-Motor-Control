@@ -19,10 +19,10 @@
 #endif
 
 // --------------- Define row-names for the _PinAssignment - matrix -----------------------------------------------
-#define InputPin 0
-#define InhibitPin 1
-#define AdcPin 2
-#define RefVoltage 3
+#define INPUTPIN 0
+#define INHIBITPIN 1
+#define ADCPIN 2
+#define REFVOLTAGE 3
 // ----------------------------------------------------------------------------------------------------------------
 
 #define TIMEOUT 500        // milliseconds
