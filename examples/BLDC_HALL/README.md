@@ -1,6 +1,6 @@
 # Setup for Brushlessmotor with Hallsensor
 
-**Status**: Successful tested on Arduino UNO with a RS-PRO hall BLDCM
+**Status**: Tested on Arduino UNO with a RS-PRO hall BLDCM
 
 ## Hardware
 When you have a new, unopened IFX007T board, you may first change some resistors, as the board is suited for BEMF (sensorless) mode only when delivered. So please have a look in the [Board manual](https://www.infineon.com/dgdl/Infineon-Motor_Control_Shield_with_IFX007T_for_Arduino-UserManual-v02_00-EN.pdf?fileId=5546d462694c98b401696d2026783556) on page 8 and solder up the required resistors.  
@@ -17,7 +17,7 @@ Connect the three phase wires of your brushless motor to the 'U V W' outputs of 
 This function sets the RpM speed for a hallsensor based BLDC motor.
 Use this function only in a continous loop without any time-critical code next to it (just like in the example sketch).  
 The paramter direction can be 0 or 1.  
-The parameter rpmSpeed can be a value from 0 to the maximum speed of your motor.
+The parameter rpmSpeed can be a value from 0 to the maximum speed of your motor.  
 The paramter FieldWeakening can be 0 or 1. 0 claims 'normal' mode, with 1 the motor is driven in the field weakening range, means the motor turns with its double speed but with less torque.  
 This function uses an integrated PI-regulator, to keep the desired speed. 
 
