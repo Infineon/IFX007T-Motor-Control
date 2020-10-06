@@ -22,6 +22,7 @@ setBLDCmotorRPMspeed	KEYWORD2
 setBLDCDutyCyclespeed	KEYWORD2
 setHallBLDCmotorRPMspeed	KEYWORD2
 setHallBLDCmotorDCspeed	KEYWORD2
+CommutateHallBLDC	KEYWORD2
 DebugRoutine	KEYWORD2
 
 #######################################

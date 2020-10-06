@@ -17,6 +17,7 @@ env:
       - PLATFORMIO_CI_SRC=examples/For_H_bridge
       - PLATFORMIO_CI_SRC=examples/For_half_bridge
       - PLATFORMIO_CI_SRC=examples/IFX007_BLDC_BEMF
+      - PLATFORMIO_CI_SRC=examples/BLDC_HALL
 
 install: 
   - pip install -U platformio==4.1.0

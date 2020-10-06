@@ -106,6 +106,7 @@ void IFX007TMotorControl::end(void)
 
 /**
  * For uniderectional motor
+ * @brief Up to three motors can be controlled unidirectional
  * @param motor which output should be active, 0=U, 1=V, 2=W
  * @param dutycycle speed, can be a value from 0 - 255
  */
@@ -124,12 +125,52 @@ void IFX007TMotorControl::setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle)
 
 /**
  * For bidirectional motor
+ * @brief One bidir motor can be wired to U and V, allowing one unidir motor on W.
+ * @param direction can be 0 or 1
+ * @param dutycycle speed, can be a value from 0 - 255
+ */
+void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle)
+{
+    // default Pin Configuration for one Bidirectional Motor
+    uint8_t pin1 = 0;   // corresponds to U
+    uint8_t pin2 = 1;   // corresponds to V
+
+    if( !(_BiDirMotorStatus & (1<<1)) )
+    {
+      if(dutycycle > 0)   
+      {
+        _BiDirMotorStatus |= (1<<0);    //on
+        digitalWrite(_PinAssignment[INHIBITPIN][pin1], HIGH);
+        digitalWrite(_PinAssignment[INHIBITPIN][pin2], HIGH);
+      }
+      else
+      {
+        _BiDirMotorStatus &= ~(1<<0);   //off
+        digitalWrite(_PinAssignment[INHIBITPIN][pin1], LOW);
+        digitalWrite(_PinAssignment[INHIBITPIN][pin2], LOW);
+      }
+      
+      if(direction == 0)
+      {
+        analogWrite(_PinAssignment[INPUTPIN][pin1], dutycycle);
+        digitalWrite(_PinAssignment[INPUTPIN][pin2], LOW);
+      }
+      else
+      {
+        analogWrite(_PinAssignment[INPUTPIN][pin2], dutycycle);
+        digitalWrite(_PinAssignment[INPUTPIN][pin1], LOW);
+      }
+    }
+}
+
+/**
+ * For bidirectional motor - overloaded function
  * @brief One bidir motor can be wired to U and V, allowing one unidir motor on W. If the half of possible speed is ok as well, two bidir motors are possible with common V.
  * @param motor 0: one bidir motor on U-V. 1: Two bidir motors, new dutycycle is for motor U-V. 2: Two bidir motors, new dutycycle is motor V-W.
  * @param direction can be 0 or 1
  * @param dutycycle speed, can be a value from 0 - 255
  */
-void IFX007TMotorControl::setBiDirMotorSpeed(uint8_t motor, bool direction, uint8_t dutycycle)
+void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle, uint8_t motor)
 {
     // default Pin Configuration for one Bidirectional Motor
     uint8_t pin1 = 0;   // corresponds to U
@@ -140,7 +181,7 @@ void IFX007TMotorControl::setBiDirMotorSpeed(uint8_t motor, bool direction, uint
 
     switch(motor){
       case 0:
-      if( !(_BiDirMotorStatus & ((1<<1) | (1<<2))) )
+      if( !(_BiDirMotorStatus & (1<<1)) )
       {
         if(dutycycle > 0)   
         {

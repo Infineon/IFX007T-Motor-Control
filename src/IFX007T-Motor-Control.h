@@ -68,7 +68,9 @@ class IFX007TMotorControl
         void    end(void);
 
         void    setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle);                      //For Unidirectional motors
-        void    setBiDirMotorSpeed(uint8_t motor, bool direction, uint8_t dutycycle);       //For Bidirectional motors
+        void    setBiDirMotorSpeed(bool direction, uint8_t dutycycle);                      //For Bidirectional motors
+        void    setBiDirMotorSpeed(bool direction, uint8_t dutycycle, uint8_t motor);       //For Bidirectional motors (overloaded function)
+        
         void    configureBLDCMotor(BLDCParameter MyParameters);  
         void    setBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed);
         void    setBLDCDutyCyclespeed(bool direction, uint8_t dutycycle);
