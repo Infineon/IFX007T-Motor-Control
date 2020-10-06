@@ -8,11 +8,26 @@ Plug in your supply voltage for the board (e.g. 12V) and run the code!
 
 <img src="/pictures/Schematics_H-bridge.JPG" width="600">
 
+Now pay attention: You can even drive two DC motors with independent speed and independent direction! The only disadvantage is, that each motor can drive only the half of its maximum speed it would be capable of with the given supply voltage. This is because both motors share the V-connection (like you can see in the picture below). But lets assume you have a two wheel Robot with a 6V Battery, but your motors turn already fast enough with 3V, this mode would be perfect for you.
+
+<img src="/pictures/Schematics_H-bridge_two-motors.JPG" width="600">
+
 ## Software
 ### Functions
-#### .setBiDirMotorSpeed(direction, speed)
-The first argument tells the Arduino in which direction it should turn (0 or 1).
-The second argument tells the Arduino how fast you want the motor to turn. 255 is the maximum speed, 0 stops the motor.
+
+#### .setBiDirMotorSpeed(direction, speed, (motor) )
+The first argument 'direction' tells the arduino in which direction it should turn (0 or 1).  
+The second argument 'speed' tells the arduino how fast you want the motor to turn. 255 is the maximum speed, 0 stops the motor.  
+The third (optional) argument 'motor' defines which hardware setup you have and which speed you want to control according to the following table:  
+
+|    motor      | **scenario** | **maximum speed** |
+|       ---|---|---|
+|**0**     | One bidirectional motor, a second unidirectional motor is possible (default)   | Full    |
+|**1**     | Two bidirectional motors, speed affects motor 1     |Half Vcc|
+|**2**     | Two bidirectional motors, speed affects motor 2     |Half Vcc|
+
+
+
 
 With the provided example code, your motor should first accelerate in one direction to full speed, brake down, and then do the same in the other direction. 
 

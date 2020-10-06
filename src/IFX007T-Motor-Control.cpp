@@ -1,8 +1,16 @@
 /**
- * IFX007T-Motor-Control.cpp    -   Library for Arduino to control the BLDC Motor Shield with IFX007T Motor driver.
+ * IFX007T-Motor-Control.cpp    -   Library for the Infineon BLDC Motor Control Shield with IFX007T Motor driver.
  * 
- * TODO:
- * Implement RPM Function for sensorless BLDC
+ * Tested microcontroller boards: 
+ *    Arduino UNO
+ *    XMC4700 Relax kit for 5V shields
+ * 
+ * The Library supports the following operation modes:
+ *    sensorless BEMF mode (BLDC)
+ *    hallsensor mode (BLDC)
+ *    3 unipolar motors (DC)
+ *    1 bidirectional motor (DC)
+ *    2 bidirectional motors (DC)
  */
 
 #include "IFX007T-Motor-Control.h"
@@ -14,18 +22,18 @@
 IFX007TMotorControl::IFX007TMotorControl(void)
 {
     // ----------- Default Pin Assignment ---------------
-    _PinAssignment[InputPin][0] = 11;
-    _PinAssignment[InputPin][1] = 10;
-    _PinAssignment[InputPin][2] = 9;
-    _PinAssignment[InhibitPin][0] = 6;
-    _PinAssignment[InhibitPin][1] = 5;
-    _PinAssignment[InhibitPin][2] = 3;
-    _PinAssignment[AdcPin][0] = 17;
-    _PinAssignment[AdcPin][1] = 16;
-    _PinAssignment[AdcPin][2] = 15;
-    _PinAssignment[RefVoltage][0] = 14;
-    _PinAssignment[RefVoltage][1] = 18;
-    _PinAssignment[RefVoltage][2] = 19;
+    _PinAssignment[INPUTPIN][0] = 11;
+    _PinAssignment[INPUTPIN][1] = 10;
+    _PinAssignment[INPUTPIN][2] = 9;
+    _PinAssignment[INHIBITPIN][0] = 6;
+    _PinAssignment[INHIBITPIN][1] = 5;
+    _PinAssignment[INHIBITPIN][2] = 3;
+    _PinAssignment[ADCPIN][0] = A3;
+    _PinAssignment[ADCPIN][1] = A2;
+    _PinAssignment[ADCPIN][2] = A1;
+    _PinAssignment[REFVOLTAGE][0] = A0;
+    _PinAssignment[REFVOLTAGE][1] = A4;
+    _PinAssignment[REFVOLTAGE][2] = A5;
 
 }
 
@@ -36,18 +44,18 @@ IFX007TMotorControl::IFX007TMotorControl(void)
  */
 IFX007TMotorControl::IFX007TMotorControl(BLDCPinSetting MotorPins)
 {
-    _PinAssignment[InputPin][0] = MotorPins.in_U;
-    _PinAssignment[InputPin][1] = MotorPins.in_V;
-    _PinAssignment[InputPin][2] = MotorPins.in_W;
-    _PinAssignment[InhibitPin][0] = MotorPins.inh_U;
-    _PinAssignment[InhibitPin][1] = MotorPins.inh_V;
-    _PinAssignment[InhibitPin][2] = MotorPins.inh_W;
-    _PinAssignment[AdcPin][0] = MotorPins.BEMF_U;
-    _PinAssignment[AdcPin][1] = MotorPins.BEMF_V;
-    _PinAssignment[AdcPin][2] = MotorPins.BEMF_W;
-    _PinAssignment[RefVoltage][0] = MotorPins.adc_Vneutral;
-    _PinAssignment[RefVoltage][1] = MotorPins.adc_IS;
-    _PinAssignment[RefVoltage][2] = MotorPins.adc_ISRC;
+    _PinAssignment[INPUTPIN][0] = MotorPins.in_U;
+    _PinAssignment[INPUTPIN][1] = MotorPins.in_V;
+    _PinAssignment[INPUTPIN][2] = MotorPins.in_W;
+    _PinAssignment[INHIBITPIN][0] = MotorPins.inh_U;
+    _PinAssignment[INHIBITPIN][1] = MotorPins.inh_V;
+    _PinAssignment[INHIBITPIN][2] = MotorPins.inh_W;
+    _PinAssignment[ADCPIN][0] = MotorPins.BEMF_U;
+    _PinAssignment[ADCPIN][1] = MotorPins.BEMF_V;
+    _PinAssignment[ADCPIN][2] = MotorPins.BEMF_W;
+    _PinAssignment[REFVOLTAGE][0] = MotorPins.adc_Vneutral;
+    _PinAssignment[REFVOLTAGE][1] = MotorPins.adc_IS;
+    _PinAssignment[REFVOLTAGE][2] = MotorPins.adc_ISRC;
 }
 
 /**
@@ -67,38 +75,38 @@ void IFX007TMotorControl::begin(void)
   #ifdef DEBUG_IFX007T
     pinMode(12, OUTPUT); //for debugging
   #endif
-    pinMode(_PinAssignment[InhibitPin][0], OUTPUT);
-    pinMode(_PinAssignment[InhibitPin][1], OUTPUT);
-    pinMode(_PinAssignment[InhibitPin][2], OUTPUT);
-    pinMode(_PinAssignment[InputPin][0], OUTPUT);
-    pinMode(_PinAssignment[InputPin][1], OUTPUT);
-    pinMode(_PinAssignment[InputPin][2], OUTPUT);
+    pinMode(_PinAssignment[INHIBITPIN][0], OUTPUT);
+    pinMode(_PinAssignment[INHIBITPIN][1], OUTPUT);
+    pinMode(_PinAssignment[INHIBITPIN][2], OUTPUT);
+    pinMode(_PinAssignment[INPUTPIN][0], OUTPUT);
+    pinMode(_PinAssignment[INPUTPIN][1], OUTPUT);
+    pinMode(_PinAssignment[INPUTPIN][2], OUTPUT);
 
-    digitalWrite(_PinAssignment[InhibitPin][0], LOW);
-    digitalWrite(_PinAssignment[InhibitPin][1], LOW);
-    digitalWrite(_PinAssignment[InhibitPin][2], LOW);
-    digitalWrite(_PinAssignment[InputPin][0], LOW);
-    digitalWrite(_PinAssignment[InputPin][1], LOW);
-    digitalWrite(_PinAssignment[InputPin][2], LOW);
+    digitalWrite(_PinAssignment[INHIBITPIN][0], LOW);
+    digitalWrite(_PinAssignment[INHIBITPIN][1], LOW);
+    digitalWrite(_PinAssignment[INHIBITPIN][2], LOW);
+    digitalWrite(_PinAssignment[INPUTPIN][0], LOW);
+    digitalWrite(_PinAssignment[INPUTPIN][1], LOW);
+    digitalWrite(_PinAssignment[INPUTPIN][2], LOW);
 
-    setPwmFrequency(_PinAssignment[InputPin][0], 1);  // set Frequency to 31250 Hz
-    setPwmFrequency(_PinAssignment[InputPin][1], 1);
-    setPwmFrequency(_PinAssignment[InputPin][2], 1);
+    setPwmFrequency(_PinAssignment[INPUTPIN][0], 1);  // set Frequency to 31250 Hz
+    setPwmFrequency(_PinAssignment[INPUTPIN][1], 1);
+    setPwmFrequency(_PinAssignment[INPUTPIN][2], 1);
 
-    // Set ADC sampling time faster in order to be fast enough to detect commutation pulse:
-    setADCspeedFast();
+    DEBUG_PRINT_LN("Debug mode is active.");
 }
 
 void IFX007TMotorControl::end(void)
 {
   /* Stop interrupts here */
-  digitalWrite(_PinAssignment[InhibitPin][0], LOW);   // Lock the halfbridges
-  digitalWrite(_PinAssignment[InhibitPin][1], LOW);
-  digitalWrite(_PinAssignment[InhibitPin][2], LOW);
+  digitalWrite(_PinAssignment[INHIBITPIN][0], LOW);   // Lock the halfbridges
+  digitalWrite(_PinAssignment[INHIBITPIN][1], LOW);
+  digitalWrite(_PinAssignment[INHIBITPIN][2], LOW);
 }
 
 /**
  * For uniderectional motor
+ * @brief Up to three motors can be controlled unidirectional
  * @param motor which output should be active, 0=U, 1=V, 2=W
  * @param dutycycle speed, can be a value from 0 - 255
  */
@@ -106,52 +114,151 @@ void IFX007TMotorControl::setUniDirMotorSpeed(uint8_t motor, uint8_t dutycycle)
 {
     if(dutycycle > 0)
     {
-        digitalWrite(_PinAssignment[InhibitPin][motor], HIGH);       //Set Inhibit to high
+        digitalWrite(_PinAssignment[INHIBITPIN][motor], HIGH);       //Set Inhibit to high
     }
     else                                                             //Motor is stopped
     {
-        digitalWrite(_PinAssignment[InhibitPin][motor], LOW);
+        digitalWrite(_PinAssignment[INHIBITPIN][motor], LOW);
     }
-    analogWrite(_PinAssignment[InputPin][motor], dutycycle);
+    analogWrite(_PinAssignment[INPUTPIN][motor], dutycycle);
 }
 
 /**
- * For biderectional motor
+ * For bidirectional motor
+ * @brief One bidir motor can be wired to U and V, allowing one unidir motor on W.
  * @param direction can be 0 or 1
  * @param dutycycle speed, can be a value from 0 - 255
  */
 void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle)
 {
-    //--------------- default Pin Configuration for the Bidirectional Motor ------------
-    uint8_t pin1 = 0;   // corresponds tu U   
+    // default Pin Configuration for one Bidirectional Motor
+    uint8_t pin1 = 0;   // corresponds to U
     uint8_t pin2 = 1;   // corresponds to V
 
-    if(dutycycle > 0)   
+    if( !(_BiDirMotorStatus & (1<<1)) )
     {
-        digitalWrite(_PinAssignment[InhibitPin][pin1], HIGH);
-        digitalWrite(_PinAssignment[InhibitPin][pin2], HIGH);
-    }
-    else
-    {
-        digitalWrite(_PinAssignment[InhibitPin][pin1], LOW);
-        digitalWrite(_PinAssignment[InhibitPin][pin2], LOW);
-    }
-    
-    if(direction == 0)
-    {
-        analogWrite(_PinAssignment[InputPin][pin1], dutycycle);
-        digitalWrite(_PinAssignment[InputPin][pin2], LOW);
-    }
-    else
-    {
-        analogWrite(_PinAssignment[InputPin][pin2], dutycycle);
-        digitalWrite(_PinAssignment[InputPin][pin1], LOW);
+      if(dutycycle > 0)   
+      {
+        _BiDirMotorStatus |= (1<<0);    //on
+        digitalWrite(_PinAssignment[INHIBITPIN][pin1], HIGH);
+        digitalWrite(_PinAssignment[INHIBITPIN][pin2], HIGH);
+      }
+      else
+      {
+        _BiDirMotorStatus &= ~(1<<0);   //off
+        digitalWrite(_PinAssignment[INHIBITPIN][pin1], LOW);
+        digitalWrite(_PinAssignment[INHIBITPIN][pin2], LOW);
+      }
+      
+      if(direction == 0)
+      {
+        analogWrite(_PinAssignment[INPUTPIN][pin1], dutycycle);
+        digitalWrite(_PinAssignment[INPUTPIN][pin2], LOW);
+      }
+      else
+      {
+        analogWrite(_PinAssignment[INPUTPIN][pin2], dutycycle);
+        digitalWrite(_PinAssignment[INPUTPIN][pin1], LOW);
+      }
     }
 }
 
 /**
- * MotorPoles: amount of teeth (should be a multiple of 3)
- * NrMagnets: Numer of Magnets (should be a multiple of 2)
+ * For bidirectional motor - overloaded function
+ * @brief One bidir motor can be wired to U and V, allowing one unidir motor on W. If the half of possible speed is ok as well, two bidir motors are possible with common V.
+ * @param motor 0: one bidir motor on U-V. 1: Two bidir motors, new dutycycle is for motor U-V. 2: Two bidir motors, new dutycycle is motor V-W.
+ * @param direction can be 0 or 1
+ * @param dutycycle speed, can be a value from 0 - 255
+ */
+void IFX007TMotorControl::setBiDirMotorSpeed(bool direction, uint8_t dutycycle, uint8_t motor)
+{
+    // default Pin Configuration for one Bidirectional Motor
+    uint8_t pin1 = 0;   // corresponds to U
+    uint8_t pin2 = 1;   // corresponds to V
+    uint8_t speed =0;
+    if(direction) speed = 127 - dutycycle/2;    //Calculate correct speed (motor stops with dutycycle of 127)
+    else speed = 127 + dutycycle/2;
+
+    switch(motor){
+      case 0:
+      if( !(_BiDirMotorStatus & (1<<1)) )
+      {
+        if(dutycycle > 0)   
+        {
+          _BiDirMotorStatus |= (1<<0);    //on
+          digitalWrite(_PinAssignment[INHIBITPIN][pin1], HIGH);
+          digitalWrite(_PinAssignment[INHIBITPIN][pin2], HIGH);
+        }
+        else
+        {
+          _BiDirMotorStatus &= ~(1<<0);   //off
+          digitalWrite(_PinAssignment[INHIBITPIN][pin1], LOW);
+          digitalWrite(_PinAssignment[INHIBITPIN][pin2], LOW);
+        }
+        
+        if(direction == 0)
+        {
+          analogWrite(_PinAssignment[INPUTPIN][pin1], dutycycle);
+          digitalWrite(_PinAssignment[INPUTPIN][pin2], LOW);
+        }
+        else
+        {
+          analogWrite(_PinAssignment[INPUTPIN][pin2], dutycycle);
+          digitalWrite(_PinAssignment[INPUTPIN][pin1], LOW);
+        }
+        break;
+      }
+      case 1:
+      if( !(_BiDirMotorStatus & (1<<0)) )   //Make sure, case 0 is not active
+      {
+        if(dutycycle > 0){
+          _BiDirMotorStatus |= (1<<1);    //on
+          digitalWrite(_PinAssignment[INHIBITPIN][0], HIGH);
+          analogWrite(_PinAssignment[INPUTPIN][0], speed);
+                 
+          digitalWrite(_PinAssignment[INHIBITPIN][1], HIGH);  //Switch on common 50% PWM
+          analogWrite(_PinAssignment[INPUTPIN][1], 127);
+          
+        }
+        else{
+          _BiDirMotorStatus &= ~(1<<1);   //off
+          digitalWrite(_PinAssignment[INHIBITPIN][0], LOW);
+          analogWrite(_PinAssignment[INPUTPIN][0], 0);
+        }
+      }
+        break;
+      case 2:
+      if( !(_BiDirMotorStatus & (1<<0)) )    //Make sure, case 0 is not active
+      {
+        if(dutycycle > 0){
+            _BiDirMotorStatus |= (1<<2);    //on
+            digitalWrite(_PinAssignment[INHIBITPIN][2], HIGH);
+            analogWrite(_PinAssignment[INPUTPIN][2], speed);
+                  
+            digitalWrite(_PinAssignment[INHIBITPIN][1], HIGH);  //Switch on common 50% PWM
+            analogWrite(_PinAssignment[INPUTPIN][1], 127);
+            
+          }
+          else{
+            _BiDirMotorStatus &= ~(1<<2);   //off
+            digitalWrite(_PinAssignment[INHIBITPIN][2], LOW);
+            analogWrite(_PinAssignment[INPUTPIN][2], 0);
+          }
+      }
+          break;
+      default:
+      break;
+    }
+    
+    if(_BiDirMotorStatus == 0){               //Switch off common 50% PWM, if both Motors are off
+      digitalWrite(_PinAssignment[INHIBITPIN][1], LOW);
+      analogWrite(_PinAssignment[INPUTPIN][1], 0);
+    }
+}
+
+/**
+ * amount of teeth should be a multiple of 3
+ * Numer of Magnets should be a multiple of 2
  * Hallsensor: 0 means BEMF-Mode, 1 means Hallsensor-mode
  * 
  * Refer to: https://www.allaboutcircuits.com/industry-articles/3-phase-brushless-dc-motor-control-with-hall-sensors/
@@ -165,26 +272,27 @@ void IFX007TMotorControl::configureBLDCMotor(BLDCParameter MyParameters)
     _debugPin = 1;
     
 
-    if(MyParameters.SensingMode)    //Hall-sensor mode (Not supported yet)
+    if(MyParameters.SensingMode)                        //Hall-sensor mode
     {
-        #define HALLmode
-        pinMode(_PinAssignment[AdcPin][0], INPUT_PULLUP);
-        pinMode(_PinAssignment[AdcPin][1], INPUT_PULLUP);
-        pinMode(_PinAssignment[AdcPin][2], INPUT_PULLUP);
+        #define HALLMODE
+        DEBUG_PRINT_LN("Hallsensor mode");
+        _CurrentDutyCycle = 80;                         // dutycycle at the beginning
+        _PI_Update_Timeout = millis() + 100;
     }
-    else             //BEMF mode
+    else                                                //BEMF mode
     {
-        #define BEMFmode
-        _V_neutral = analogRead(_PinAssignment[RefVoltage][0]);    //Dummy measurement
-        MotorParam = MyParameters;                                 //Store the parameters in a global variable
+        #define BEMFMODE
+        DEBUG_PRINT_LN("Sensorless BEMF mode");
+        _V_neutral = analogRead(_PinAssignment[REFVOLTAGE][0]);    //Dummy measurement
         calculateLinearFunction(MyParameters.V_neutral, MotorParam.V_neutralFunct);
         calculateLinearFunction(MyParameters.Phasedelay,  MotorParam.PhasedelayFunct);
+        
+        // Set ADC sampling time faster in order to be fast enough to detect commutation pulse:
+        setADCspeedFast();
     }
-    _NumberofSteps = ((MyParameters.MotorPoles /2 +1) * 6);    //experimaental, need exact formula
-
-    DEBUG_PRINT_LN("Debug mode is active.");
+    MotorParam = MyParameters;                                 //Store the parameters in a global variable
+    _NumberofSteps = (float) MyParameters.MotorPolepairs * 6.0;
 }
-
 
 /**
  * Program function
@@ -206,6 +314,7 @@ void IFX007TMotorControl::calculateLinearFunction(float *array, float *result)
  */
 bool IFX007TMotorControl::StartupBLDC(bool dir)
 {
+  
   _CurrentDutyCycle = 150;     //Initial Speed for Startup
   uint16_t i = 7000;           //Delay to start with
 
@@ -225,7 +334,7 @@ bool IFX007TMotorControl::StartupBLDC(bool dir)
     UpdateHardware(_Commutation);
     i=i-30;                     // Decrease the delay, maybe you have to play araound with this value
   }
-
+  
   _lastBLDCspeed = 1;
   return 1;
 }
@@ -365,7 +474,7 @@ void IFX007TMotorControl::DoBEMFCommutation(bool direction)
     #endif
 
     //Calculate the reference voltage and store in the global _V_neutral
-    _V_neutral = (uint16_t) (analogRead(_PinAssignment[RefVoltage][0]) * (_CurrentDutyCycle/255.0)+0.5)-_V_NeutralOffset;
+    _V_neutral = (uint16_t) (analogRead(_PinAssignment[REFVOLTAGE][0]) * (_CurrentDutyCycle/255.0)+0.5)-_V_NeutralOffset;
 
     switch (_Commutation)
     {
@@ -424,7 +533,7 @@ bool IFX007TMotorControl::DetectZeroCrossing(uint8_t Pin, bool sign)
   {
     for (uint8_t i=0; i< iterations; i++)
     {
-      BEMFvoltage = analogRead(_PinAssignment[AdcPin][Pin]);
+      BEMFvoltage = analogRead(_PinAssignment[ADCPIN][Pin]);
       if (BEMFvoltage > _V_neutral) i-=1;
     }
   }
@@ -432,7 +541,7 @@ bool IFX007TMotorControl::DetectZeroCrossing(uint8_t Pin, bool sign)
   {
     for (uint8_t i=0; i< iterations; i++)
     {
-      BEMFvoltage = analogRead(_PinAssignment[AdcPin][Pin]);
+      BEMFvoltage = analogRead(_PinAssignment[ADCPIN][Pin]);
       if (BEMFvoltage < _V_neutral) i-=1;
     }
   }
@@ -500,6 +609,164 @@ void IFX007TMotorControl::DebugRoutine(uint8_t Serialinput)
     }
 }
 
+
+/**
+ * User function
+ * Set the RPM speed, direction and fieldmode for hallsensor BLDCM
+*/
+void IFX007TMotorControl::setHallBLDCmotorRPMspeed(bool direction, uint16_t desired_rpmSpeed, bool FieldWeakening)
+{
+  if(desired_rpmSpeed>0)
+    {
+      if(_lastBLDCspeed == 0)
+      {
+        _oldHall = UpdateHall();
+        UpdateHardware( HallPattern[FieldWeakening][direction][_oldHall] );
+        _lastBLDCspeed = 1;
+      }
+      else
+      {
+        if(WaitForCommutation())
+        {
+          _oldHall = _latestHall;
+          UpdateHardware( HallPattern[FieldWeakening][direction][_oldHall] );
+        }
+      }
+      PI_Regulator_DoWork(desired_rpmSpeed);
+      _HallCounts++;
+    }
+    else
+    {
+      end();
+      _lastBLDCspeed = 0;
+    } 
+}
+
+/**
+ * User function
+ * Set the Dutycycle speed, direction and fieldmode for hallsensor BLDCM
+*/
+void IFX007TMotorControl::setHallBLDCmotorDCspeed(bool direction, uint8_t dutycycle, bool FieldWeakening)
+{
+    _CurrentDutyCycle = dutycycle;
+    if(dutycycle > 10)
+    {
+      if(_lastBLDCspeed == 0)
+      {
+        _oldHall = UpdateHall();
+        UpdateHardware( HallPattern[FieldWeakening][direction][_oldHall] );
+        _lastBLDCspeed = 1;
+      }
+      else
+      {
+        if(WaitForCommutation())
+        {
+          _oldHall = _latestHall;
+          UpdateHardware( HallPattern[FieldWeakening][direction][_oldHall] );
+        }
+      }
+    }
+    else
+    {
+      end();
+      _lastBLDCspeed = 0;
+    } 
+}
+
+/**
+ * For Hallsensor BLDC
+ * this function is executed until either the Hallsensor pattern changes or a timer is out of time.
+ * The timer is a kind of watchdog that makes sure, that the program gets not stuck, if the dutycycle was too low.
+ */
+bool IFX007TMotorControl::WaitForCommutation(void)
+{
+  uint32_t timestamp = millis();
+  while(1)
+  {
+    if(_oldHall != UpdateHall() ) return 1;
+    else if( (millis()-timestamp) > TIMEOUT)
+    {
+      end();
+      _lastBLDCspeed = 0;
+      return 0;
+    }
+  }
+}
+
+/**
+ * For Hall sensor BLDC
+ * The function will be executed every 100ms.
+ * It mesaures the actual RpM speed, compares it to the desired RpM speed and regulates the CurrentDutyCycle using a PI-regulator
+*/
+void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
+{
+  if (millis() > _PI_Update_Timeout)
+  {
+    float RPM = 0.0;
+    float hallcounts = (float) _HallCounts;
+    // Formula for 100ms intervall: RPM = (Hallcounts / (6 * MotorPolepairs)) * 10 * 60
+    
+    RPM = (_HallCounts/ _NumberofSteps) * 600;
+    _PI_Update_Timeout = millis() + 100;
+    
+    DEBUG_PRINT_LN(RPM);
+
+    float Error = desired_rpmSpeed - RPM;
+    if(_CurrentDutyCycle < 240) _PI_Integral = _PI_Integral + Error;
+    float pwm = MotorParam.PI_Reg_P * Error + MotorParam.PI_Reg_I * _PI_Integral;
+    //Limit PWM
+    if (pwm > 240) pwm = 240;
+    if (pwm < 30) pwm = 30;
+    _CurrentDutyCycle = (uint8_t) pwm;    
+    _HallCounts = 0;
+   
+  }
+}
+
+/**
+ * For BLDC_Find_Polepairs test program
+*/
+uint8_t IFX007TMotorControl::CommutateHallBLDC(uint8_t Dutycycle, bool hallsensor)
+{
+  _CurrentDutyCycle = Dutycycle;
+   _Commutation++ ;
+  if (_Commutation==6) _Commutation=0;
+  UpdateHardware(_Commutation);
+  if(hallsensor) return UpdateHall();
+  else return 0;
+}
+
+
+/**
+ * For hall BLDCM
+ * Read the hallsensor status, to get the new position information of the motor.
+ * Needs special handling for the XMC, as digitalRead() on Analog pins does only work on Arduino
+ */
+uint8_t IFX007TMotorControl::UpdateHall(void)
+{
+  _latestHall = 0; 
+  
+  #ifdef ARDUINO_AVR_UNO                                             // For Arduino Boards 
+
+  // Optimized for Arduino: max tested speed: 3300 RpM (WK = 0), 6000 RpM (WK = 1)
+  _latestHall = (digitalRead(_PinAssignment[ADCPIN][0])<<2) | (digitalRead(_PinAssignment[ADCPIN][1])<<1) | digitalRead(_PinAssignment[ADCPIN][2]);
+
+
+  #elif ((XMC1100_Boot_Kit)  || (XMC4700_Relax_Kit))                // For XMC boards 
+
+  //Only for XMC, max speed with Arduino only 3500 RpM
+  for(uint8_t i=0; i<3; i++)
+  {
+    uint16_t out = analogRead(_PinAssignment[ADCPIN][i]);
+    if(out>512) out = 1;
+    else out = 0;
+    _latestHall = _latestHall | (out<<(2-i));
+  }
+  #endif
+  
+  return _latestHall;
+}
+
 /**
  * Commutation table for brushless motors (the "6 step Process")
  * Inhibit Pin = High means active -> Inhibit Pin = Low means output is floating
@@ -508,57 +775,57 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep)
 {
   switch (CommutationStep) {
     case 0:
-      digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
-      digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
-      digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
-      analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
-      analogWrite(_PinAssignment[InputPin][1], 0);
-      analogWrite(_PinAssignment[InputPin][2], 0);
+      digitalWrite(_PinAssignment[INHIBITPIN][0], HIGH);    //PWM
+      digitalWrite(_PinAssignment[INHIBITPIN][1], HIGH);    //GND
+      digitalWrite(_PinAssignment[INHIBITPIN][2], LOW);     //Floating
+      analogWrite(_PinAssignment[INPUTPIN][0], _CurrentDutyCycle);
+      analogWrite(_PinAssignment[INPUTPIN][1], 0);
+      analogWrite(_PinAssignment[INPUTPIN][2], 0);
       break;
 
     case 1:
-      digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //PWM
-      digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
-      digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
-      analogWrite(_PinAssignment[InputPin][0], _CurrentDutyCycle);
-      analogWrite(_PinAssignment[InputPin][1], 0);
-      analogWrite(_PinAssignment[InputPin][2], 0);
+      digitalWrite(_PinAssignment[INHIBITPIN][0], HIGH);    //PWM
+      digitalWrite(_PinAssignment[INHIBITPIN][1], LOW);     //Floating
+      digitalWrite(_PinAssignment[INHIBITPIN][2], HIGH);    //GND
+      analogWrite(_PinAssignment[INPUTPIN][0], _CurrentDutyCycle);
+      analogWrite(_PinAssignment[INPUTPIN][1], 0);
+      analogWrite(_PinAssignment[INPUTPIN][2], 0);
       break;
 
     case 2:
-      digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
-      digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
-      digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //GND
-      analogWrite(_PinAssignment[InputPin][0], 0);
-      analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
-      analogWrite(_PinAssignment[InputPin][2], 0);
+      digitalWrite(_PinAssignment[INHIBITPIN][0], LOW);     //Floating
+      digitalWrite(_PinAssignment[INHIBITPIN][1], HIGH);    //PWM
+      digitalWrite(_PinAssignment[INHIBITPIN][2], HIGH);    //GND
+      analogWrite(_PinAssignment[INPUTPIN][0], 0);
+      analogWrite(_PinAssignment[INPUTPIN][1], _CurrentDutyCycle);
+      analogWrite(_PinAssignment[INPUTPIN][2], 0);
       break;
 
     case 3:
-      digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
-      digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //PWM
-      digitalWrite(_PinAssignment[InhibitPin][2], LOW);     //Floating
-      analogWrite(_PinAssignment[InputPin][0], 0);
-      analogWrite(_PinAssignment[InputPin][1], _CurrentDutyCycle);
-      analogWrite(_PinAssignment[InputPin][2], 0);
+      digitalWrite(_PinAssignment[INHIBITPIN][0], HIGH);    //GND
+      digitalWrite(_PinAssignment[INHIBITPIN][1], HIGH);    //PWM
+      digitalWrite(_PinAssignment[INHIBITPIN][2], LOW);     //Floating
+      analogWrite(_PinAssignment[INPUTPIN][0], 0);
+      analogWrite(_PinAssignment[INPUTPIN][1], _CurrentDutyCycle);
+      analogWrite(_PinAssignment[INPUTPIN][2], 0);
       break;
 
     case 4:
-      digitalWrite(_PinAssignment[InhibitPin][0], HIGH);    //GND
-      digitalWrite(_PinAssignment[InhibitPin][1], LOW);     //Floating
-      digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
-      analogWrite(_PinAssignment[InputPin][0], 0);
-      analogWrite(_PinAssignment[InputPin][1], 0);
-      analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
+      digitalWrite(_PinAssignment[INHIBITPIN][0], HIGH);    //GND
+      digitalWrite(_PinAssignment[INHIBITPIN][1], LOW);     //Floating
+      digitalWrite(_PinAssignment[INHIBITPIN][2], HIGH);    //PWM
+      analogWrite(_PinAssignment[INPUTPIN][0], 0);
+      analogWrite(_PinAssignment[INPUTPIN][1], 0);
+      analogWrite(_PinAssignment[INPUTPIN][2], _CurrentDutyCycle);
       break;
 
     case 5:
-      digitalWrite(_PinAssignment[InhibitPin][0], LOW);     //Floating
-      digitalWrite(_PinAssignment[InhibitPin][1], HIGH);    //GND
-      digitalWrite(_PinAssignment[InhibitPin][2], HIGH);    //PWM
-      analogWrite(_PinAssignment[InputPin][0], 0);
-      analogWrite(_PinAssignment[InputPin][1], 0);
-      analogWrite(_PinAssignment[InputPin][2], _CurrentDutyCycle);
+      digitalWrite(_PinAssignment[INHIBITPIN][0], LOW);     //Floating
+      digitalWrite(_PinAssignment[INHIBITPIN][1], HIGH);    //GND
+      digitalWrite(_PinAssignment[INHIBITPIN][2], HIGH);    //PWM
+      analogWrite(_PinAssignment[INPUTPIN][0], 0);
+      analogWrite(_PinAssignment[INPUTPIN][1], 0);
+      analogWrite(_PinAssignment[INPUTPIN][2], _CurrentDutyCycle);
       break;
 
     default:
@@ -659,7 +926,7 @@ void IFX007TMotorControl::setADCspeedFast(void)
 
 void IFX007TMotorControl::setPwmFrequency(uint8_t pin, uint16_t divisor)
 {
-  setAnalogWriteFrequency(pin, 15000);       // 31250 Hz, obviously we nee the half (fault in XMCforArduino?)
+  setAnalogWriteFrequency(pin, 30000);       // 31250 Hz, obviously we nee the half (fault in XMCforArduino?)
 }
 
 void IFX007TMotorControl::setADCspeedFast(void)

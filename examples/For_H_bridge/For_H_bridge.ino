@@ -23,15 +23,16 @@ void loop()
   direction = 0;
   for(speed = 0; speed < 255; speed ++)
   {
-    // First Argument: Choose which direction the Motor should turn: 0 or 1
-    // Second Argument: Choose how fast it should turn: a value between 0 and 255
-    MyMotor.setBiDirMotorSpeed(direction, speed);
+    // First Argument: Choose the constellation you have: 0, 1 or 2. Refer to the Readme.
+    // Second Argument: Choose which direction the Motor should turn: 0 or 1
+    // Third Argument: Choose how fast it should turn: a value between 0 and 255
+    MyMotor.setBiDirMotorSpeed(direction, speed, 0);
     delay(50);
   }
   Serial.println("Brake forwards");
   for(speed = 255; speed > 0; speed --)
   {
-    MyMotor.setBiDirMotorSpeed(direction, speed);
+    MyMotor.setBiDirMotorSpeed(direction, speed, 0);
     delay(50);
   }
 
@@ -39,13 +40,13 @@ void loop()
   direction = 1;
   for(speed = 0; speed < 255; speed ++)
   {
-    MyMotor.setBiDirMotorSpeed(direction, speed);
+    MyMotor.setBiDirMotorSpeed(direction, speed, 0);
     delay(50);
   }
   Serial.println("Brake backwards");
   for(speed = 255; speed > 0; speed --)
   {
-    MyMotor.setBiDirMotorSpeed(direction, speed);
+    MyMotor.setBiDirMotorSpeed(direction, speed, 0);
     delay(50);
   }
 }

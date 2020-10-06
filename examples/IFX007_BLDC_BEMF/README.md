@@ -53,27 +53,27 @@ You can see it quite clear on these Oszi-screenshots:
 However these two parameters are not constant, they are dependant of the current dutycycle (= speed), so we have to implement a function.
 
 Lets take a look at the following charts:
-<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/explanation_parameters.jpg" width="900">
+<img src="/pictures/explanation_parameters.jpg" width="900">
 
 These are the values I got by tuning the parameters by hand. So every 10 dutycycle points I played araound with the values for *Phasedelay* and *V_neutral offset* (via the Serial monitor/Keyboard input), to get the minimum current but the maximum RPM speed. I recognized, you can approach the graph, when you say: At the borders you have a constant part, and in the middle there's a linear slope. The approach looks quite good for the *V_neutral offset*. Ok, maybe the *Phasedelay* graph looks a bit venturous, however it works. 
 Now, what you can do, is shift the brake of slope to suit your motor. I think the picture describes it the best.
 
 To give you an idea what current values are typical, here are mine (again for the Pichler Boost 15 BLDC motor):
-<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/diagram_current.jpg" width="600">
+<img src="/pictures/diagram_current.jpg" width="600">
 
 ### Tuning
 Ok, but how to find out your values? Therefore you have to change in the debug mode:
 Set your Dutycycle to 1:
-<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/SetDutycycleToOne.JPG" width="300">
+<img src="/pictures/SetDutycycleToOne.JPG" width="300">
 
 Uncomment the following in the *src/IFX007T_Motor-Control.h*
-<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/UncommentDegugMode.JPG" width="1000">
+<img src="/pictures/UncommentDegugMode.JPG" width="1000">
 
 Upload the sketch to your Arduino.
 Now you can set the *V_neutral Offset* and the *Phasedelay* just like the *Dutycycle* manually (you won't need to change the iterations, its always 3).
 
 Here (*src/IFX007T_Motor-Control.h*) you would find the initial values after startup:
-<img src="https://github.com/Infineon/IFX007T-Motor-Control/blob/ardlib/pictures/TuneStartValues.JPG" width="400">
+<img src="/pictures/TuneStartValues.JPG" width="400">
 
 ### Keybord commands for tuning
 |            | **Speed** | **V_neutralOffset** | **Phasedelay** | **Iterations** |

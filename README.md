@@ -5,7 +5,7 @@ IFX007T NovalithIC™ based DC motor control
 
 <img src="https://github.com/Infineon/Assets/blob/master/Pictures/IFX007T_BLDC%20Shield_Pinout.jpg" width="500"> 
 
-Library of Infineon's [BLDC motor control shield](https://www.infineon.com/cms/en/product/evaluation-boards/bldc-shield_ifx007t/) for Arduino.
+Library of Infineon's [BLDC motor control shield](https://www.infineon.com/cms/en/product/evaluation-boards/bldc-shield_ifx007t/) for Arduino IDE.
 Refer also to the [Board manual](https://www.infineon.com/dgdl/Infineon-Motor_Control_Shield_with_IFX007T_for_Arduino-UserManual-v02_00-EN.pdf?fileId=5546d462694c98b401696d2026783556).
 
 ## Summary
@@ -23,10 +23,10 @@ The (Brushless) DC motor control shield from Infineon technologies is a high cur
   * Average motor current 30A restricted due to PCB (IFX007T current limitation @ 55A min.)
 
 ## Supported Microcontroller Boards
-|               | Half bridge | H-bridge | BLDC BEMF |
-|       ---|---|---|---|
-|**Arduino UNO**| yes     | yes     | yes     |
-|**XMC4700**    | yes     | yes     | no      |
+|               | Half bridge | H-bridge | BLDC BEMF | BLDC Hall |
+|       ---|---|---|---|---|
+|**Arduino UNO**| yes     | yes     | yes     | yes   |
+|**XMC4700**    | yes     | yes     | no      | yes   |
 
 ## Usage
 Please follow the example sketches in the /examples directory in this library to learn more about the usage of the library.
