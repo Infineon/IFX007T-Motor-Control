@@ -708,8 +708,6 @@ void IFX007TMotorControl::PI_Regulator_DoWork(uint16_t desired_rpmSpeed)
     
     RPM = (_HallCounts/ _NumberofSteps) * 600;
     _PI_Update_Timeout = millis() + 100;
-    
-    DEBUG_PRINT_LN(RPM);
 
     float Error = desired_rpmSpeed - RPM;
     if(_CurrentDutyCycle < 240) _PI_Integral = _PI_Integral + Error;
@@ -746,13 +744,12 @@ uint8_t IFX007TMotorControl::UpdateHall(void)
 {
   _latestHall = 0; 
   
-  #ifdef ARDUINO_AVR_UNO                                             // For Arduino Boards 
+  #if defined(ARDUINO_AVR_UNO) || defined(ARDUINO_AVR_MEGA2560)                                           // For Arduino Boards 
 
   // Optimized for Arduino: max tested speed: 3300 RpM (WK = 0), 6000 RpM (WK = 1)
   _latestHall = (digitalRead(_PinAssignment[ADCPIN][0])<<2) | (digitalRead(_PinAssignment[ADCPIN][1])<<1) | digitalRead(_PinAssignment[ADCPIN][2]);
 
-
-  #elif ((XMC1100_Boot_Kit)  || (XMC4700_Relax_Kit))                // For XMC boards 
+  #elif defined(XMC1100_Boot_Kit)  || defined(XMC4700_Relax_Kit)                // For XMC boards 
 
   //Only for XMC, max speed with Arduino only 3500 RpM
   for(uint8_t i=0; i<3; i++)
@@ -920,9 +917,70 @@ void IFX007TMotorControl::setADCspeedFast(void)
     cbi(ADCSRA,ADPS0) ;
 }
 
+#elif ARDUINO_AVR_MEGA2560
+void IFX007TMotorControl::setPwmFrequency(uint8_t pin, uint16_t divisor)
+{
+    byte mode;
+    if (pin < 9 || pin > 10) {
+      switch (divisor) {
+      case 1: mode = 0x01; break;     // 31372,55 Hz  (62500,00 Hz on pin D4 & D13)
+      case 8: mode = 0x02; break;     // 3921,16 Hz   (7812,50 Hz on pin D4 & D13)
+      case 64: mode = 0x03; break;    // 490,20 Hz    (976,56 Hz on pin D4 & D13)
+      case 256: mode = 0x04; break;   // 122,55 Hz    (244,14 Hz on pin D4 & D13)
+      case 1024: mode = 0x05; break;  // 30,64 Hz     (61,04 Hz on pin D4 & D13)
+      default: return;
+      }
+      if (pin == 4 || pin == 13) {
+        TCCR0B = TCCR0B & 0b11111000 | mode;
+      }
+      else if (pin == 11 || pin == 12){
+        TCCR1B = TCCR1B & 0b11111000 | mode;
+      }
+      else if (pin == 2 || pin == 3 || pin == 5){
+        TCCR3B = TCCR3B & 0b11111000 | mode;
+      }
+      else if (pin == 6 || pin == 7 || pin == 8){
+        TCCR4B = TCCR4B & 0b11111000 | mode;
+      }
+      else{
+         TCCR5B = TCCR5B & 0b11111000 | mode;
+      }
+    } else if (pin == 9 || pin == 10) {
+        switch (divisor) {
+        case 1: mode = 0x01; break;     // 31372,55 Hz
+        case 8: mode = 0x02; break;     // 3921,16 Hz
+        case 32: mode = 0x03; break;    // 980,39 Hz
+        case 64: mode = 0x04; break;    // 490,20 Hz
+        case 128: mode = 0x05; break;   // 245,10 Hz
+        case 256: mode = 0x06; break;   // 122,55 Hz
+        case 1024: mode = 0x07; break;  // 30,64 Hz
+        default: return;
+        }
+        TCCR2B = TCCR2B & 0b11111000 | mode;
+    }
+}
+
+/**
+ * Source: https://forum.arduino.cc/index.php?topic=6549.0
+*/
+void IFX007TMotorControl::setADCspeedFast(void)
+{
+    // defines for setting and clearing register bits
+    #ifndef cbi
+    #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+    #endif
+    #ifndef sbi
+    #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+    #endif
+    
+    // set prescale to 16
+    sbi(ADCSRA,ADPS2) ;
+    cbi(ADCSRA,ADPS1) ;
+    cbi(ADCSRA,ADPS0) ;
+}
 
 
-#elif ((XMC1100_Boot_Kit)  || (XMC4700_Relax_Kit))                /** For XMC boards*/ 
+#elif defined(XMC1100_Boot_Kit)  || defined(XMC4700_Relax_Kit)                /** For XMC boards*/ 
 
 void IFX007TMotorControl::setPwmFrequency(uint8_t pin, uint16_t divisor)
 {
