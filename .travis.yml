@@ -16,7 +16,6 @@ env:
     matrix:
       - PLATFORMIO_CI_SRC=examples/For_H_bridge
       - PLATFORMIO_CI_SRC=examples/For_half_bridge
-      - PLATFORMIO_CI_SRC=examples/IFX007_BLDC_BEMF
       - PLATFORMIO_CI_SRC=examples/BLDC_HALL
 
 install: 
