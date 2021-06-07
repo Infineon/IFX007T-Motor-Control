@@ -23,10 +23,11 @@ The (Brushless) DC motor control shield from Infineon technologies is a high cur
   * Average motor current 30A restricted due to PCB (IFX007T current limitation @ 55A min.)
 
 ## Supported Microcontroller Boards
-|               | Half bridge | H-bridge | BLDC BEMF | BLDC Hall |
+|                     | Half bridge | H-bridge | BLDC BEMF | BLDC Hall |
 |       ---|---|---|---|---|
-|**Arduino UNO**| yes     | yes     | yes     | yes   |
-|**XMC4700**    | yes     | yes     | no      | yes   |
+|**Arduino UNO**      | yes     | yes     | yes     | yes   |
+|**Aruino Mega2560**  | yes     | yes     | yes     | yes   |
+|**XMC4700**          | yes     | yes     | no      | yes   |
 
 ## Usage
 Please follow the example sketches in the /examples directory in this library to learn more about the usage of the library.
