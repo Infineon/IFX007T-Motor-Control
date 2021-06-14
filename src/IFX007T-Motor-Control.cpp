@@ -465,7 +465,7 @@ void IFX007TMotorControl::DoBEMFCommutation(bool direction)
         if(_V_NeutralOffset < MotorParam.V_neutral[3]) _V_NeutralOffset = MotorParam.V_neutral[3];
 
         phasedelay = (uint8_t) (_CurrentDutyCycle * MotorParam.PhasedelayFunct[0] + MotorParam.PhasedelayFunct[1]);
-        if(phasedelay > MotorParam.Phasedelay[1]) phasedelay = 120;
+        if(phasedelay > MotorParam.Phasedelay[1]) phasedelay = MotorParam.Phasedelay[1];
         if(phasedelay < MotorParam.Phasedelay[3]) phasedelay = MotorParam.Phasedelay[3];
 
         _lastBLDCspeed = _CurrentDutyCycle;
