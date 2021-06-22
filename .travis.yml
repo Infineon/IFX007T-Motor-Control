@@ -16,13 +16,12 @@ env:
     matrix:
       - PLATFORMIO_CI_SRC=examples/For_H_bridge
       - PLATFORMIO_CI_SRC=examples/For_half_bridge
-      - PLATFORMIO_CI_SRC=examples/IFX007_BLDC_BEMF
       - PLATFORMIO_CI_SRC=examples/BLDC_HALL
 
 install: 
-  - pip install -U platformio==4.1.0
-  - platformio platform install -f infineonxmc@1.1.3 
-  - platformio platform install -f atmelavr@2.0.0
+  - pip install -U platformio
+  - platformio platform install -f infineonxmc
+  - platformio platform install -f atmelavr
 
 script: 
   - platformio ci --lib="." --board=uno --board=xmc1100_boot_kit --board=xmc4700_relax_kit 
