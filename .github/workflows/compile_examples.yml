@@ -1,0 +1,19 @@
+name: Compile examples
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - main
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+  schedule:
+    - cron: '30 3 * * 5' # Run every Friday at 3:30 AM UTC
+
+jobs:
+  arduino-devops:
+    uses: Infineon/arduino-devops/.github/workflows/compile-examples-lib.yml@latest
