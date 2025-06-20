@@ -831,7 +831,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep)
 }
 
 
-#ifdef ARDUINO_AVR_UNO                                                  /** For Arduino Boards */
+#if defined(ARDUINO_AVR_UNO) || defined(ARDUINO_AVR_NANO)                                                  /** For Arduino Boards */
 
 /**
  * TODO: Include function from an external library, as its only usefull for Arduino Platform and not for XMC.
@@ -865,7 +865,7 @@ void IFX007TMotorControl::UpdateHardware(uint8_t CommutationStep)
    Thanks to macegr of the Arduino forums for his documentation of the
    PWM frequency divisors. His post can be viewed at:
      https://forum.arduino.cc/index.php?topic=16612#msg121031
-*/
+*///just set TCCR0B, TCCR1B to mode 1(pin 9,10,11)
 void IFX007TMotorControl::setPwmFrequency(uint8_t pin, uint16_t divisor)
 {
     byte mode;
@@ -917,7 +917,41 @@ void IFX007TMotorControl::setADCspeedFast(void)
     cbi(ADCSRA,ADPS0) ;
 }
 
-#elif ARDUINO_AVR_MEGA2560
+#elif defined(ARDUINO_MINIMA) || defined(ARDUINO_UNOWIFIR4)
+void IFX007TMotorControl::setPwmFrequency(uint8_t pin, uint16_t divisor)
+{
+    byte mode;
+    if (pin == 5 || pin == 6 || pin == 9 || pin == 10) {
+        switch (divisor) {
+        case 1: mode = 0x01; break;
+        case 8: mode = 0x02; break;
+        case 64: mode = 0x03; break;
+        case 256: mode = 0x04; break;
+        case 1024: mode = 0x05; break;
+        default: return;
+        }
+        if (pin == 5 || pin == 6) {
+        TCCR0B = TCCR0B & 0b11111000 | mode;
+        } else {
+        TCCR1B = TCCR1B & 0b11111000 | mode;
+        }
+    } else if (pin == 3 || pin == 11) {
+        switch (divisor) {
+        case 1: mode = 0x01; break;
+        case 8: mode = 0x02; break;
+        case 32: mode = 0x03; break;
+        case 64: mode = 0x04; break;
+        case 128: mode = 0x05; break;
+        case 256: mode = 0x06; break;
+        case 1024: mode = 0x07; break;
+        default: return;
+        }
+        TCCR2B = TCCR2B & 0b11111000 | mode;
+    }
+}
+
+
+#elif defined(ARDUINO_AVR_MEGA2560)
 void IFX007TMotorControl::setPwmFrequency(uint8_t pin, uint16_t divisor)
 {
     byte mode;

@@ -12,7 +12,8 @@
     "frameworks":"arduino",
     "platforms":[  
        "infineonxmc",
-       "atmelavr"
+       "atmelavr",
+       "renesas-ra"
     ]
  }
  
