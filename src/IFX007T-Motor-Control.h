@@ -4,6 +4,10 @@
 
 #include <Arduino.h>
 
+
+
+
+
 //======= Very important ========
 //#define DEBUG_IFX007T         //Uncomment, if you wish debug output or tune the motor (Disables automatic V_neutralOffset)
 //===============================
