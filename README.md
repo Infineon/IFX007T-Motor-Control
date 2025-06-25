@@ -1,7 +1,8 @@
 # IFX007T-Motor-Control
-IFX007T NovalithIC™ based DC motor control
 
-[![Build Status](https://travis-ci.com/Infineon/IFX007T-Motor-Control.svg?branch=master)](https://travis-ci.com/Infineon/IFX007T-Motor-Control)
+[![Build Checks](https://github.com/Infineon/IFX007T-Motor-Control/actions/workflows/compile_examples.yml/badge.svg?branch=devops%2Fadd-build-checks)](https://github.com/Infineon/IFX007T-Motor-Control/actions/workflows/compile_examples.yml)
+
+IFX007T NovalithIC™ based DC motor control shield for Arduino.
 
 <img src="https://github.com/Infineon/Assets/blob/master/Pictures/IFX007T_BLDC%20Shield_Pinout.jpg" width="500"> 
 
