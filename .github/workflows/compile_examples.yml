@@ -16,4 +16,4 @@ on:
 
 jobs:
   arduino-devops:
-    uses: Infineon/arduino-devops/.github/workflows/compile-examples-lib.yml@latest
+    uses: Infineon/arduino-devops/.github/workflows/compile-examples.yml@latest
