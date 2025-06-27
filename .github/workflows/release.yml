@@ -21,4 +21,5 @@ jobs:
     uses: Infineon/arduino-devops/.github/workflows/release.yml@latest
     with:
       version: ${{ inputs.version }}
-    secrets: inherit
+    secrets:
+      release-ssh-key: ${{ secrets.release_wflow_key }}
