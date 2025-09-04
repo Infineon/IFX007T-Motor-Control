@@ -1,7 +1,6 @@
 # IFX007T-Motor-Control
 
 [![Build Checks](https://github.com/Infineon/IFX007T-Motor-Control/actions/workflows/compile_examples.yml/badge.svg?branch=devops%2Fadd-build-checks)](https://github.com/Infineon/IFX007T-Motor-Control/actions/workflows/compile_examples.yml)
-[![Check links](https://github.com/Infineon/XMC-for-Arduino/actions/workflows/check_links.yml/badge.svg)](https://github.com/Infineon/XMC-for-Arduino/actions/workflows/check_links.yml)
 
 IFX007T NovalithIC™ based DC motor control shield for Arduino.
 
