@@ -2,13 +2,13 @@
 
 exclude:
   #disable the boards which are not supported by the latest version of the library
- fqbn: 
- - arduino:renesas_uno:minima
- - arduino:renesas_uno:unor4wifi
- - arduino:samd:mkrzero
- - infineon:psoc6:cy8ckit_062s2_ai
- - infineon:xmc:kit_xmc_2go_xmc1100_v1
- - infineon:xmc:kit_xmc13_boot_001
- - infineon:xmc:kit_xmc1400_arduino
- - infineon:xmc:kit_xmc14_2go
+ - fqbn: 
+    - arduino:renesas_uno:minima
+    - arduino:renesas_uno:unor4wifi
+    - arduino:samd:mkrzero
+    - infineon:psoc6:cy8ckit_062s2_ai
+    - infineon:xmc:kit_xmc_2go_xmc1100_v1
+    - infineon:xmc:kit_xmc13_boot_001
+    - infineon:xmc:kit_xmc1400_arduino
+    - infineon:xmc:kit_xmc14_2go
   
