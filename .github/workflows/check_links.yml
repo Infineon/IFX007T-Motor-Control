@@ -14,4 +14,4 @@ on:
 
 jobs:
   linkChecker:
-    uses: Infineon/makers-devops/.github/workflows/check_links.yml@main
+    uses: Infineon/makers-devops/.github/workflows/check_links.yml@fix-link-checks
